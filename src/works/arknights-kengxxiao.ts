@@ -1,49 +1,44 @@
 import pProps from 'p-props'
 import { z } from 'zod'
-import { dataContainerVersionFromGitCommit, writeData } from '../dc-utils.js'
-import { CONTAINER_TYPE, CONTAINER_VERSION } from '../dc.js'
+import { buildData, dataContainerVersionFromGitCommit } from '../dc-utils.js'
 import { fetchGitHubFile, getGitHubLatestCommitForPath } from '../github.js'
 import { unwrapZod, zodTransformUnion } from '../zutils.js'
 
-export async function makeArknightsKengxxiao(lang: 'zh_CN') {
+export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US') {
   const file = 'arknights-kengxxiao-' + lang
   const repo = 'Kengxxiao/ArknightsGameData'
 
-  const commit = await getGitHubLatestCommitForPath(repo, 'master', lang)
-  const rawVersion = commit.commit.message
+  await buildData(
+    file,
+    async () => {
+      const commit = await getGitHubLatestCommitForPath(repo, 'master', lang)
+      const rawVersion = commit.commit.message
 
-  const version = dataContainerVersionFromGitCommit(repo, commit)
-  version.text = Buffer.from(rawVersion).toString('utf-8').trim()
-  console.log(version)
-
-  const work = async function (p: string) {
-    const r = await fetchGitHubFile(repo, commit.sha, p)
-    return JSON.parse(Buffer.from(r).toString('utf-8'))
-  }
-
-  const raw = await pProps({
-    exCharacters: work(lang + '/gamedata/excel/character_table.json'),
-    exPatchCharacters: work(lang + '/gamedata/excel/char_patch_table.json'),
-    exSkills: work(lang + '/gamedata/excel/skill_table.json'),
-    exUniEquips: work(lang + '/gamedata/excel/uniequip_table.json'),
-    exItems: work(lang + '/gamedata/excel/item_table.json'),
-    exBuilding: work(lang + '/gamedata/excel/building_data.json'),
-    exStage: work(lang + '/gamedata/excel/stage_table.json'),
-    exRetro: work(lang + '/gamedata/excel/retro_table.json'),
-    exZone: work(lang + '/gamedata/excel/zone_table.json'),
-  })
-
-  const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
-
-  await writeData(
-    {
-      '@type': CONTAINER_TYPE,
-      '@version': CONTAINER_VERSION,
-      name: file,
-      version,
-      data: data,
+      const version = dataContainerVersionFromGitCommit(repo, commit)
+      version.text = Buffer.from(rawVersion).toString('utf-8').trim()
+      return [version, commit]
     },
-    ArknightsKengxxiao,
+    async (commit) => {
+      const work = async function (p: string) {
+        const r = await fetchGitHubFile(repo, commit.sha, p)
+        return JSON.parse(Buffer.from(r).toString('utf-8'))
+      }
+
+      const raw = await pProps({
+        exCharacters: work(lang + '/gamedata/excel/character_table.json'),
+        exPatchCharacters: work(lang + '/gamedata/excel/char_patch_table.json'),
+        exSkills: work(lang + '/gamedata/excel/skill_table.json'),
+        exUniEquips: work(lang + '/gamedata/excel/uniequip_table.json'),
+        exItems: work(lang + '/gamedata/excel/item_table.json'),
+        exBuilding: work(lang + '/gamedata/excel/building_data.json'),
+        exStage: work(lang + '/gamedata/excel/stage_table.json'),
+        exRetro: work(lang + '/gamedata/excel/retro_table.json'),
+        exZone: work(lang + '/gamedata/excel/zone_table.json'),
+      })
+
+      const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
+      return [data, ArknightsKengxxiao]
+    },
   )
 }
 
