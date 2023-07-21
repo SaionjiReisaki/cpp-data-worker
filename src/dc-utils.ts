@@ -6,7 +6,7 @@ import { readFile, writeFile } from 'fs/promises'
 import { isDeepStrictEqual } from 'util'
 import { z } from 'zod'
 import { printNode, zodToTs } from 'zod-to-ts'
-import { CONTAINER_TYPE, CONTAINER_VERSION, IDataContainer } from './dc.js'
+import { CONTAINER_TYPE, CONTAINER_VERSION, IDataContainer, IDataContainerHeader } from './dc.js'
 import { getGitHubCommit } from './github.js'
 import { getRepoDir, getRepoFilePath, getRepoVersionPath } from './repo.js'
 
@@ -16,7 +16,8 @@ export function dataContainerVersionFromGitCommit(repo: string, commit: Awaited<
     text: commit.sha,
     timestamp: Date.parse(commit.commit.committer.date),
     sources: [`https://github.com/${repo}/tree/${commit.sha}`],
-  } satisfies IDataContainer['version']
+    schema: 0,
+  } satisfies IDataContainerHeader['version']
 
   return version
 }
@@ -38,22 +39,23 @@ async function writeData(data: IDataContainer, schema: Zod.AnyZodObject) {
 
 export async function buildData<R extends any[] = [], T extends object = object>(
   name: string,
-  buildVersion: () => Promise<readonly [IDataContainer['version'], ...R]>,
+  buildVersion: () => Promise<readonly [IDataContainerHeader['version'], ...R]>,
   buildData: (...args: R) => Promise<readonly [T, z.AnyZodObject]>,
 ) {
   console.log('fetching version for', name)
   const [version, ...args] = await buildVersion()
 
   let previousData: IDataContainer<T> | undefined = undefined
-  let previousVersion: IDataContainer | undefined = undefined
+  let previousVersion: IDataContainerHeader | undefined = undefined
   let forceUpdate = false
   let needUpdate = false
 
   if (await pathExists(getRepoVersionPath(name, 'json'))) {
-    previousVersion = JSON.parse(await readFile(getRepoVersionPath(name, 'json'), 'utf-8')) as IDataContainer
+    previousVersion = JSON.parse(await readFile(getRepoVersionPath(name, 'json'), 'utf-8')) as IDataContainerHeader
     forceUpdate = forceUpdate || previousVersion['@type'] !== CONTAINER_TYPE
     forceUpdate = forceUpdate || previousVersion['@version'] !== CONTAINER_VERSION
     forceUpdate = forceUpdate || previousVersion['name'] !== name
+    forceUpdate = forceUpdate || previousVersion['version']?.schema !== version.schema
     needUpdate = needUpdate || !isDeepStrictEqual(previousVersion.version, version)
   } else {
     forceUpdate = true
@@ -64,6 +66,7 @@ export async function buildData<R extends any[] = [], T extends object = object>
     forceUpdate = forceUpdate || previousData['@type'] !== CONTAINER_TYPE
     forceUpdate = forceUpdate || previousData['@version'] !== CONTAINER_VERSION
     forceUpdate = forceUpdate || previousData['name'] !== name
+    forceUpdate = forceUpdate || previousData['version']?.schema !== version.schema
     needUpdate = needUpdate || !isDeepStrictEqual(previousData.version, version)
   } else {
     forceUpdate = true

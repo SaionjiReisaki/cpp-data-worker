@@ -12,10 +12,9 @@ export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US') {
     file,
     async () => {
       const commit = await getGitHubLatestCommitForPath(repo, 'master', lang)
-      const rawVersion = commit.commit.message
-
       const version = dataContainerVersionFromGitCommit(repo, commit)
-      version.text = Buffer.from(rawVersion).toString('utf-8').trim()
+      version.text = commit.commit.message
+      version.schema = 1
       return [version, commit]
     },
     async (commit) => {

@@ -1,7 +1,7 @@
-export const CONTAINER_TYPE = '@orz/cpp/data-container'
-export const CONTAINER_VERSION = 1
+export const CONTAINER_TYPE = '@orz/cpp/data-container' as const
+export const CONTAINER_VERSION = 1 as const
 
-export interface IDataContainer<Data = object> {
+export interface IDataContainerHeader {
   '@type': typeof CONTAINER_TYPE
   '@version': typeof CONTAINER_VERSION
   name: string
@@ -10,6 +10,10 @@ export interface IDataContainer<Data = object> {
     text: string
     timestamp: number
     sources: string[]
+    schema: number
   }
-  data?: Data
+}
+
+export interface IDataContainer<Data = object> extends IDataContainerHeader {
+  data: Data
 }

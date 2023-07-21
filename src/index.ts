@@ -1,9 +1,36 @@
 import promiseSpawn from '@npmcli/promise-spawn'
+import { Command, Option, runExit } from 'clipanion'
 import { mkdirp, pathExists } from 'fs-extra/esm'
 import { getRepoDir, getRepoFilesDir, getRepoVersionsDir, getWorkDir } from './repo.js'
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
+import { makeReverse1999Yuanyan3060 } from './works/reverse1999-yuanyan3060.js'
 
-async function main() {
+runExit(
+  class MainCommand extends Command {
+    private push = Option.Boolean('--push', false)
+
+    public async execute() {
+      await setup()
+
+      await makeReverse1999Yuanyan3060('zh_CN')
+      await makeArknightsKengxxiao('zh_CN')
+      await makeArknightsKengxxiao('en_US')
+      makeArknightsKengxxiao.toString()
+
+      if (this.push) {
+        await promiseSpawn('git', ['push', '--set-upstream', 'origin', 'master'], {
+          stdio: 'inherit',
+          cwd: getRepoDir(),
+        })
+      }
+    }
+  },
+).then(
+  () => process.exit(process.exitCode),
+  (e) => (console.error(e), process.exit(process.exitCode || 1)),
+)
+
+async function setup() {
   if (!(await pathExists(getRepoDir())) && process.env.REPO_GITHUB_TOKEN) {
     await mkdirp(getWorkDir())
     await promiseSpawn(
@@ -41,14 +68,4 @@ async function main() {
 
   await mkdirp(getRepoFilesDir())
   await mkdirp(getRepoVersionsDir())
-
-  await makeArknightsKengxxiao('zh_CN')
-  await makeArknightsKengxxiao('en_US')
-
-  // await promiseSpawn('git', ['push', '--set-upstream', 'origin', 'master'], { stdio: 'inherit', cwd: getRepoDir() })
 }
-
-main().then(
-  () => process.exit(0),
-  (e) => (console.error(e), process.exit(1)),
-)
