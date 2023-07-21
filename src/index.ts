@@ -1,6 +1,7 @@
 import promiseSpawn from '@npmcli/promise-spawn'
 import { Command, Option, runExit } from 'clipanion'
 import { mkdirp, pathExists } from 'fs-extra/esm'
+import { minimatch } from 'minimatch'
 import { getRepoDir, getRepoFilesDir, getRepoVersionsDir, getWorkDir } from './repo.js'
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
 import { makeReverse1999Yuanyan3060 } from './works/reverse1999-yuanyan3060.js'
@@ -8,14 +9,24 @@ import { makeReverse1999Yuanyan3060 } from './works/reverse1999-yuanyan3060.js'
 runExit(
   class MainCommand extends Command {
     private push = Option.Boolean('--push', false)
+    private globs = Option.Rest()
+
+    private tasks = {
+      'reverse1999-yuanyan3060-zh_CN': () => makeReverse1999Yuanyan3060('zh_CN'),
+      'arknights-kengxxiao-zh_CN': () => makeArknightsKengxxiao('zh_CN'),
+      'arknights-kengxxiao-en_US': () => makeArknightsKengxxiao('en_US'),
+    } as Record<string, () => Promise<void>>
 
     public async execute() {
       await setup()
 
-      await makeReverse1999Yuanyan3060('zh_CN')
-      await makeArknightsKengxxiao('zh_CN')
-      await makeArknightsKengxxiao('en_US')
-      makeArknightsKengxxiao.toString()
+      const keys = Object.keys(this.tasks)
+      const filtered = new Set(this.globs.flatMap((x) => minimatch.match(keys, x, { matchBase: true })))
+      console.log('task will be running', filtered)
+
+      for (const key of filtered) {
+        await this.tasks[key]()
+      }
 
       if (this.push) {
         await promiseSpawn('git', ['push', '--set-upstream', 'origin', 'master'], {
