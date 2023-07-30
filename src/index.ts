@@ -4,7 +4,7 @@ import { mkdirp, pathExists } from 'fs-extra/esm'
 import { minimatch } from 'minimatch'
 import { getRepoDir, getRepoFilesDir, getRepoVersionsDir, getWorkDir } from './repo.js'
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
-import { makeReverse1999Yuanyan3060 } from './works/reverse1999-yuanyan3060.js'
+// import { makeReverse1999Yuanyan3060 } from './works/reverse1999-yuanyan3060.js'
 
 runExit(
   class MainCommand extends Command {
@@ -12,9 +12,11 @@ runExit(
     private globs = Option.Rest()
 
     private tasks = {
-      'reverse1999-yuanyan3060-zh_CN': () => makeReverse1999Yuanyan3060('zh_CN'),
+      // 'reverse1999-yuanyan3060-zh_CN': () => makeReverse1999Yuanyan3060('zh_CN'),
       'arknights-kengxxiao-zh_CN': () => makeArknightsKengxxiao('zh_CN'),
       'arknights-kengxxiao-en_US': () => makeArknightsKengxxiao('en_US'),
+      'arknights-kengxxiao-ja_JP': () => makeArknightsKengxxiao('ja_JP'),
+      'arknights-kengxxiao-ko_KR': () => makeArknightsKengxxiao('ko_KR'),
     } as Record<string, () => Promise<void>>
 
     public async execute() {

@@ -4,7 +4,7 @@ import { buildData, dataContainerVersionFromGitCommit } from '../dc-utils.js'
 import { fetchGitHubFile, getGitHubLatestCommitForPath } from '../github.js'
 import { unwrapZod, zodTransformUnion } from '../zutils.js'
 
-export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US') {
+export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' | 'ko_KR') {
   const file = 'arknights-kengxxiao-' + lang
   const repo = 'Kengxxiao/ArknightsGameData'
 
