@@ -1,38 +1,45 @@
 import pProps from 'p-props'
 import { z } from 'zod'
-import { buildData, dataContainerVersionFromGitCommit } from '../dc-utils.js'
-import { fetchGitHubFile, getGitHubLatestCommitForPath } from '../github.js'
+import { buildData } from '../dc-utils.js'
+import { PrivateRepo } from '../private-repo.js'
 import { unwrapZod } from '../zutils.js'
 
 export async function makeReverse1999Yuanyan3060(lang: 'zh_CN') {
   const file = 'reverse1999-yuanyan3060-' + lang
-  const repo = 'yuanyan3060/Reverse1999Resource'
+  const repo = 're1999-excel'
 
+  const p = new PrivateRepo(repo)
+  await p.git.pull()
   await buildData(
     file,
     async () => {
-      const commit = await getGitHubLatestCommitForPath(repo, 'main', 'Json')
-      const version = dataContainerVersionFromGitCommit(repo, commit)
-      version.text = commit.commit.committer.date
+      const commit = await p.getCommit()
+      const version = {
+        id: commit.latest!.hash,
+        text: commit.latest!.message,
+        timestamp: Date.parse(commit.latest!.date),
+        sources: [],
+        schema: 0,
+      }
       version.schema = 1
-      return [version, commit]
+      return [version]
     },
-    async (commit) => {
-      const work = async function (p: string) {
-        const r = await fetchGitHubFile(repo, commit.sha, p)
+    async () => {
+      const work = async function (s: string) {
+        const r = await p.read(s)
         return JSON.parse(Buffer.from(r).toString('utf-8'))
       }
 
       const raw = await pProps({
-        exChapters: work('Json/chapter.json'),
-        exEpisodes: work('Json/episode.json'),
-        exCharacters: work('Json/character.json'),
-        exItems: work('Json/item.json'),
-        exCurrencies: work('Json/currency.json'),
-        exFormulas: work('Json/formula.json'),
-        exCharacterRank: work('Json/character_rank.json'),
-        exCharacterConsume: work('Json/character_cosume.json'),
-        exCharacterTalent: work('Json/character_talent.json'),
+        exChapters: work('chapter.json'),
+        exEpisodes: work('episode.json'),
+        exCharacters: work('character.json'),
+        exItems: work('item.json'),
+        exCurrencies: work('currency.json'),
+        exFormulas: work('formula.json'),
+        exCharacterRank: work('character_rank.json'),
+        exCharacterConsume: work('character_cosume.json'),
+        exCharacterTalent: work('character_talent.json'),
       })
 
       const data = unwrapZod(Reverse1999Yuanyan3060.safeParse(raw))

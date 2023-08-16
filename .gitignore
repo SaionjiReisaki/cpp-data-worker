@@ -10,5 +10,6 @@ dist
 !.yarn/versions
 
 /work/
+/private/
 /.env
 /.vscode/launch.json
