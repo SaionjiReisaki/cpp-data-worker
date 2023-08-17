@@ -14,7 +14,7 @@ export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' |
       const commit = await getGitHubLatestCommitForPath(repo, 'master', lang)
       const version = dataContainerVersionFromGitCommit(repo, commit)
       version.text = commit.commit.message
-      version.schema = 0
+      version.schema = 2
       return [version, commit]
     },
     async (commit) => {
