@@ -14,7 +14,7 @@ export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' |
       const commit = await getGitHubLatestCommitForPath(repo, 'master', lang)
       const version = dataContainerVersionFromGitCommit(repo, commit)
       version.text = commit.commit.message
-      version.schema = 1
+      version.schema = 0
       return [version, commit]
     },
     async (commit) => {
@@ -26,6 +26,7 @@ export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' |
       const raw = await pProps({
         exCharacters: work(lang + '/gamedata/excel/character_table.json'),
         exPatchCharacters: work(lang + '/gamedata/excel/char_patch_table.json'),
+        exSkin: work(lang + '/gamedata/excel/skin_table.json'),
         exSkills: work(lang + '/gamedata/excel/skill_table.json'),
         exUniEquips: work(lang + '/gamedata/excel/uniequip_table.json'),
         exItems: work(lang + '/gamedata/excel/item_table.json'),
@@ -120,6 +121,10 @@ const ArknightsKengxxiao = z.object({
       }),
     ),
     patchChars: z.record(z.object(character)),
+  }),
+  exSkin: z.object({
+    buildinEvolveMap: z.record(z.record(z.string())),
+    buildinPatchMap: z.record(z.record(z.string())),
   }),
   exSkills: z.record(
     z.object({
