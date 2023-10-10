@@ -2,7 +2,7 @@ import fetch from 'node-fetch'
 
 function getAuthHeader(): object {
   if (process.env.GITHUB_TOKEN) {
-    return { Authoriazation: `token ${process.env.GITHUB_TOKEN}` }
+    return { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
   }
   return {}
 }
@@ -42,10 +42,11 @@ export async function getGitHubLatestCommitForPath(repo: string, branch: string,
       },
     },
   )
-  if (!res.ok)
+  if (!res.ok) {
     throw new Error(
       `Failed to getGitHubLatestCommitForPath for ${repo} ${branch} ${path}: Error ${res.status}: ${res.statusText}`,
     )
+  }
   return (
     (await res.json()) as [
       {
