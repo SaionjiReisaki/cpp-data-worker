@@ -6,12 +6,13 @@ import { unwrapZod, zodTransformUnion } from '../zutils.js'
 
 export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' | 'ko_KR') {
   const file = 'arknights-kengxxiao-' + lang
-  const repo = 'Kengxxiao/ArknightsGameData'
+  const repo = lang === 'zh_CN' ? 'Kengxxiao/ArknightsGameData' : 'Kengxxiao/ArknightsGameData_YoStar'
+  const branch = lang === 'zh_CN' ? 'master' : 'main'
 
   await buildData(
     file,
     async () => {
-      const commit = await getGitHubLatestCommitForPath(repo, 'master', lang)
+      const commit = await getGitHubLatestCommitForPath(repo, branch, lang)
       const version = dataContainerVersionFromGitCommit(repo, commit)
       version.text = commit.commit.message
       version.schema = 2
