@@ -17,7 +17,7 @@ export async function makeReverse1999HisboundenDutyDrops(branch: 'china') {
         id: data.updatedAt,
         text: data.updatedAt,
         timestamp: Date.parse(data.updatedAt),
-        sources: [],
+        sources: [data.sourceUrl],
         schema: 0,
       }
       version.schema = 1
