@@ -731,6 +731,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/luxon@npm:^3":
+  version: 3.3.7
+  resolution: "@types/luxon@npm:3.3.7"
+  checksum: 97026557e92bcba308a5592f981591cd200d493fc8997874d79acecf6a2ec41debeded3ac5cd80c371ef7f6f56cc0d1be0a5aca846e03d3e6b4a2be37256fe2f
+  languageName: node
+  linkType: hard
+
 "@types/node@npm:*":
   version: 20.4.2
   resolution: "@types/node@npm:20.4.2"
@@ -1344,6 +1351,7 @@ __metadata:
     "@npmcli/promise-spawn": ^6.0.2
     "@types/eslint": ^8
     "@types/fs-extra": ^11
+    "@types/luxon": ^3
     "@types/node": 16
     "@types/npmcli__promise-spawn": ^6.0.0
     "@typescript-eslint/eslint-plugin": ^6.1.0
@@ -1353,6 +1361,7 @@ __metadata:
     eslint: ^8.45.0
     fast-json-stable-stringify: ^2.1.0
     fs-extra: ^11.1.1
+    luxon: ^3.4.4
     minimatch: ^9.0.3
     node-fetch: ^3.3.1
     p-props: ^5.0.0
@@ -2766,6 +2775,13 @@ __metadata:
   version: 10.0.0
   resolution: "lru-cache@npm:10.0.0"
   checksum: 18f101675fe283bc09cda0ef1e3cc83781aeb8373b439f086f758d1d91b28730950db785999cd060d3c825a8571c03073e8c14512b6655af2188d623031baf50
+  languageName: node
+  linkType: hard
+
+"luxon@npm:^3.4.4":
+  version: 3.4.4
+  resolution: "luxon@npm:3.4.4"
+  checksum: 36c1f99c4796ee4bfddf7dc94fa87815add43ebc44c8934c924946260a58512f0fd2743a629302885df7f35ccbd2d13f178c15df046d0e3b6eb71db178f1c60c
   languageName: node
   linkType: hard
 
