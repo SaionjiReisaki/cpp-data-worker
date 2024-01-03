@@ -3,6 +3,7 @@ import { Command, Option, runExit } from 'clipanion'
 import { mkdirp, pathExists } from 'fs-extra/esm'
 import { minimatch } from 'minimatch'
 import { getRepoDir, getRepoFilesDir, getRepoVersionsDir, getWorkDir } from './repo.js'
+import { makeArknightsHeyboxOperatorSurvey } from './works/arknights-heybox-operatorsurvey.js'
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
 import { makeArknightsYituliuOperatorSurvey } from './works/arknights-yituliu-operatorsurvey.js'
 import { makeArknightsYituliuValues } from './works/arknights-yituliu-values.js'
@@ -20,6 +21,7 @@ runExit(
       'arknights-kengxxiao-en_US': () => makeArknightsKengxxiao('en_US'),
       'arknights-kengxxiao-ja_JP': () => makeArknightsKengxxiao('ja_JP'),
       'arknights-kengxxiao-ko_KR': () => makeArknightsKengxxiao('ko_KR'),
+      'arknights-heybox-operatorsurvey': () => makeArknightsHeyboxOperatorSurvey(),
       'arknights-yituliu-values': () => makeArknightsYituliuValues(),
       'arknights-yituliu-operatorsurvey': () => makeArknightsYituliuOperatorSurvey(),
       'reverse1999-hisboundenduty-drops-china': () => makeReverse1999HisboundenDutyDrops('china'),

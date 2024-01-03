@@ -1358,6 +1358,7 @@ __metadata:
     "@typescript-eslint/parser": ^6.1.0
     case-anything: ^2.1.13
     clipanion: ^3.2.1
+    csv-parse: ^5.5.3
     eslint: ^8.45.0
     fast-json-stable-stringify: ^2.1.0
     fs-extra: ^11.1.1
@@ -1382,6 +1383,13 @@ __metadata:
     shebang-command: ^2.0.0
     which: ^2.0.1
   checksum: 671cc7c7288c3a8406f3c69a3ae2fc85555c04169e9d611def9a675635472614f1c0ed0ef80955d5b6d4e724f6ced67f0ad1bb006c2ea643488fcfef994d7f52
+  languageName: node
+  linkType: hard
+
+"csv-parse@npm:^5.5.3":
+  version: 5.5.3
+  resolution: "csv-parse@npm:5.5.3"
+  checksum: 38399bc4c61b721bc2f52a6262d6000b4e5f391e45b071f6eb087b293a02f867020f7da36adf6f56eb9fb45bd28c82cd223afd35846551fb5ad31bf3d0602961
   languageName: node
   linkType: hard
 

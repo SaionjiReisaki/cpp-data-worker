@@ -26,6 +26,11 @@ function encode(s: object): string {
   return stringify(s)
 }
 
+export async function readData<T>(name: string) {
+  const data = JSON.parse(await readFile(getRepoFilePath(name, 'json'), 'utf-8')) as IDataContainer<T>
+  return data
+}
+
 async function writeData(data: IDataContainer, schema: Zod.AnyZodObject) {
   const version = Object.assign({}, data, { data: undefined })
   await writeFile(getRepoVersionPath(data.name, 'json'), encode(version))

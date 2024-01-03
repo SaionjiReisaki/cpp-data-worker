@@ -112,7 +112,7 @@ const stage = z.object({
   apCost: z.number(),
 })
 
-const ArknightsKengxxiao = z.object({
+export const ArknightsKengxxiao = z.object({
   exCharacters: z.record(z.object(character)),
   exPatchCharacters: z.object({
     infos: z.record(
