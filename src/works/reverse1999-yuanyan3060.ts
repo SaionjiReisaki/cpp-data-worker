@@ -87,7 +87,7 @@ const Reverse1999Yuanyan3060 = z.object({
       id: z.number(),
       name: z.string(),
       subType: z.number().int(),
-      rare: z.number().int().min(1).max(5),
+      rare: z.number().int().min(0).max(5),
       icon: z.string(),
       isShow: z.number().int().min(0).max(1),
     }),
