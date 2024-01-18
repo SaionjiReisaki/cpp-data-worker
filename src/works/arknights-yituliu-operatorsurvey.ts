@@ -9,7 +9,7 @@ export async function makeArknightsYituliuOperatorSurvey() {
   await buildData(
     file,
     async () => {
-      const data = await (await fetch('https://ytl.viktorlab.cn/backend/survey/operator/result')).json()
+      const data = await (await fetch('https://ark.yituliu.cn/backend/survey/operator/result')).json()
       if (data.code !== 200) throw new Error('Unexpected response code: ' + data.code)
 
       const now = DateTime.fromFormat(data.data.updateTime, 'yyyy-MM-dd HH:mm:ss', {
@@ -20,7 +20,7 @@ export async function makeArknightsYituliuOperatorSurvey() {
         id: nowText,
         text: nowText,
         timestamp: now.getTime(),
-        sources: ['https://ytl.viktorlab.cn'],
+        sources: ['https://ark.yituliu.cn'],
         schema: 0,
       }
       version.schema = 1
