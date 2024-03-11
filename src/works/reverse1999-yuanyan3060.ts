@@ -118,7 +118,7 @@ const Reverse1999Yuanyan3060 = z.object({
   exCharacterConsume: z.array(
     z.object({
       rare: z.number().int().min(1).max(5),
-      cosume: z.string().regex(/^(2#5#(\d+)\|2#3#(\d+)|)$/), // should be consume
+      cosume: z.string().regex(/^(2#5#(\d+)\|2#3#(\d+)|)$/),
       level: z.number().int(),
     }),
   ),
