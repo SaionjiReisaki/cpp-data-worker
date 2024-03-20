@@ -7,6 +7,7 @@ import { makeArknightsHeyboxOperatorSurvey } from './works/arknights-heybox-oper
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
 import { makeArknightsYituliuOperatorSurvey } from './works/arknights-yituliu-operatorsurvey.js'
 import { makeArknightsYituliuValues } from './works/arknights-yituliu-values.js'
+import { makeReverse1999EnigmaticNebula } from './works/reverse1999-enigmaticnebula.js'
 import { makeReverse1999HisboundenDutyDrops } from './works/reverse1999-hisboundenduty-drops.js'
 import { makeReverse1999HisboundenDutyValues } from './works/reverse1999-hisboundenduty-values.js'
 import { makeReverse1999Yuanyan3060 } from './works/reverse1999-yuanyan3060.js'
@@ -30,6 +31,11 @@ runExit(
 
     private privateTasks = {
       'reverse1999-yuanyan3060-zh_CN': () => makeReverse1999Yuanyan3060('zh_CN'),
+      'reverse1999-enigmaticnebula-en': () => makeReverse1999EnigmaticNebula('en'),
+      'reverse1999-enigmaticnebula-jp': () => makeReverse1999EnigmaticNebula('jp'),
+      'reverse1999-enigmaticnebula-kr': () => makeReverse1999EnigmaticNebula('kr'),
+      'reverse1999-enigmaticnebula-tw': () => makeReverse1999EnigmaticNebula('tw'),
+      'reverse1999-enigmaticnebula-zh': () => makeReverse1999EnigmaticNebula('zh'),
     } as Record<string, () => Promise<void>>
 
     public async execute() {
