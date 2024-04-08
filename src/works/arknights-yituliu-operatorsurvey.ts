@@ -9,7 +9,7 @@ export async function makeArknightsYituliuOperatorSurvey() {
   await buildData(
     file,
     async () => {
-      const data = await (await fetch('https://ark.yituliu.cn/backend/survey/operator/result')).json()
+      const data = await (await fetch('https://backend.yituliu.cn/survey/operator/result')).json()
       if (data.code !== 200) throw new Error('Unexpected response code: ' + data.code)
 
       const now = DateTime.fromFormat(data.data.updateTime, 'yyyy-MM-dd HH:mm:ss', {
@@ -27,6 +27,24 @@ export async function makeArknightsYituliuOperatorSurvey() {
       return [version, data]
     },
     async (raw) => {
+      const shit = (a: any) => {
+        if (!a) return
+        if (!('rank0' in a)) {
+          a.rank0 = 1 - a.rank1 - a.rank2 - a.rank3
+        }
+        if (!('count' in a)) {
+          a.rank0 = 1
+          a.rank1 = 0
+          a.rank2 = 0
+          a.rank3 = 0
+          a.count = 0
+        }
+      }
+      raw.data.result.forEach((op: any) => {
+        shit(op.modX)
+        shit(op.modY)
+        shit(op.modD)
+      })
       const data = unwrapZod(Shape.safeParse(raw.data))
       return [data, Shape]
     },
