@@ -41,6 +41,10 @@ export async function makeArknightsYituliuOperatorSurvey() {
         }
       }
       raw.data.result.forEach((op: any) => {
+        shit(op.elite)
+        shit(op.skill1)
+        shit(op.skill2)
+        shit(op.skill3)
         shit(op.modX)
         shit(op.modY)
         shit(op.modD)
