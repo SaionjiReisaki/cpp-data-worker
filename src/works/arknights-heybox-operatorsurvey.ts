@@ -97,9 +97,8 @@ const RawShape = z.array(
   z
     .object({
       name: z.string(),
-      avatar: z
-        .string()
-        .regex(/^https:\/\/[a-z]{9}.[a-z]{3}-[a-z].com\/[a-z]{6}\/\d{4}\/\d{2}\/\d{2}\/[a-f0-9]{32}\.png$/),
+      avatar: z.string(),
+      // .regex(/^https:\/\/[a-z]{9}.[a-z]{3}-[a-z].com\/[a-z]{6}\/\d{4}\/\d{2}\/\d{2}\/[a-f0-9]{32}\.png$/),
       updated: z.string().regex(/^\d+$/),
       updated_lv2: z.union([z.string().length(0), z.string().regex(/^\d+$/)]),
       elite2_rate: RawPercent,
@@ -187,8 +186,9 @@ const Shape = z.object({
 
 function findId(excel: IDataContainer<z.TypeOf<typeof ArknightsKengxxiao>>, name: string, avatar: string): any {
   if (name === '阿米娅') {
-    if (avatar.includes('eed4c7f904c11c7305a59886f6960951')) return 'char_002_amiya'
-    if (avatar.includes('eac3649cd49df605de6e968ad0afa5ec')) return 'char_1001_amiya2'
+    if (avatar.includes('/eed4c7f904c11c7305a59886f6960951.png')) return 'char_002_amiya'
+    if (avatar.includes('/eac3649cd49df605de6e968ad0afa5ec.png')) return 'char_1001_amiya2'
+    if (avatar.includes('/char_1037_amiya3.png')) return 'char_1037_amiya3'
     throw new Error('Unexpected avatar for amiya: ' + avatar)
   }
   const chars = Object.entries(excel.data.exCharacters).filter((x) => !!x[1].displayNumber && x[1].name === name)
