@@ -188,6 +188,7 @@ function findId(excel: IDataContainer<z.TypeOf<typeof ArknightsKengxxiao>>, name
   if (name === '阿米娅') {
     if (avatar.includes('/eed4c7f904c11c7305a59886f6960951.png')) return 'char_002_amiya'
     if (avatar.includes('/eac3649cd49df605de6e968ad0afa5ec.png')) return 'char_1001_amiya2'
+    if (avatar.includes('/353f34dff5b14fc6be8ca2a895f7a231.png')) return 'char_1037_amiya3'
     if (avatar.includes('/char_1037_amiya3.png')) return 'char_1037_amiya3'
     throw new Error('Unexpected avatar for amiya: ' + avatar)
   }
