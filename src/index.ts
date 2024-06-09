@@ -50,11 +50,14 @@ runExit(
       const filtered = new Set(this.globs.flatMap((x) => minimatch.match(keys, x, { matchBase: true })))
       console.log('task will be running', filtered)
 
+      let failed = false
       for (const key of filtered) {
         await core.group('task ' + key, async () => {
           try {
             await this.tasks[key]()
           } catch (e) {
+            failed = true
+            console.error(e)
             core.error(e as Error, {
               title: `task ${key} failed`,
             })
@@ -67,6 +70,10 @@ runExit(
           stdio: 'inherit',
           cwd: getRepoDir(),
         })
+      }
+
+      if (failed) {
+        throw new Error('some tasks failed')
       }
     }
   },
