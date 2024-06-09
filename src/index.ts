@@ -1,3 +1,4 @@
+import core from '@actions/core'
 import promiseSpawn from '@npmcli/promise-spawn'
 import { Command, Option, runExit } from 'clipanion'
 import { mkdirp, pathExists } from 'fs-extra/esm'
@@ -50,7 +51,15 @@ runExit(
       console.log('task will be running', filtered)
 
       for (const key of filtered) {
-        await this.tasks[key]()
+        await core.group('task ' + key, async () => {
+          try {
+            await this.tasks[key]()
+          } catch (e) {
+            core.error(e as Error, {
+              title: `task ${key} failed`,
+            })
+          }
+        })
       }
 
       if (this.push) {
