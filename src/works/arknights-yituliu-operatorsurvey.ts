@@ -39,6 +39,11 @@ export async function makeArknightsYituliuOperatorSurvey() {
           a.rank3 = 0
           a.count = 0
         }
+        if (a.rank0 >= -Number.EPSILON && a.rank0 <= Number.EPSILON) a.rank0 = 0
+        if (a.rank1 >= -Number.EPSILON && a.rank1 <= Number.EPSILON) a.rank1 = 0
+        if (a.rank2 >= -Number.EPSILON && a.rank2 <= Number.EPSILON) a.rank2 = 0
+        if (a.rank3 >= -Number.EPSILON && a.rank3 <= Number.EPSILON) a.rank3 = 0
+        if (a.count >= -Number.EPSILON && a.count <= Number.EPSILON) a.count = 0
       }
       raw.data.result.forEach((op: any) => {
         shit(op.elite)
