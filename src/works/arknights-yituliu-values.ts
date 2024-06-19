@@ -8,7 +8,7 @@ export async function makeArknightsYituliuValues() {
   await buildData(
     file,
     async () => {
-      const data = await (await fetch('https://ark.yituliu.cn/backend/item/export/json')).json()
+      const data = await (await fetch('https://backend.yituliu.cn/item/export/json')).json()
       const now = new Date()
       const nowText = now.toJSON()
       const version = {
