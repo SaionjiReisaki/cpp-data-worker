@@ -15,7 +15,7 @@ export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' |
       const commit = await getGitHubLatestCommitForPath(repo, branch, lang)
       const version = dataContainerVersionFromGitCommit(repo, commit)
       version.text = commit.commit.message
-      version.schema = 2
+      version.schema = 3
       return [version, commit]
     },
     async (commit) => {
@@ -73,6 +73,18 @@ const character = {
   description: z.union([z.string(), z.null()]),
   displayNumber: z.union([z.string(), z.null()]),
   appellation: z.string(),
+  profession: z.enum([
+    'CASTER',
+    'MEDIC',
+    'PIONEER',
+    'SNIPER',
+    'SPECIAL',
+    'SUPPORT',
+    'TANK',
+    'WARRIOR',
+    'TRAP',
+    'TOKEN',
+  ]),
   rarity: rarity,
   skills: z.array(
     z.object({
