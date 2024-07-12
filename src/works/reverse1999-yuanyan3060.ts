@@ -24,11 +24,12 @@ export async function buildReverse1999(file: string, repo: string, locale?: { la
         sources: [],
         schema: 0,
       }
-      version.schema = 1
+      version.schema = 2
       return [version]
     },
     async () => {
-      const work = async function (s: string) {
+      const work = async function (s: string, emptyIfNotFound = false) {
+        if (emptyIfNotFound && !(await p.exists(s))) return []
         const r = await p.read(s)
         return JSON.parse(Buffer.from(r).toString('utf-8'))
       }
@@ -43,6 +44,8 @@ export async function buildReverse1999(file: string, repo: string, locale?: { la
         exCharacterRank: work('character_rank.json'),
         exCharacterConsume: work('character_cosume.json'),
         exCharacterTalent: work('character_talent.json'),
+        exTalentStyleCost: work('talent_style_cost.json', true),
+        exTalentStyle: work('talent_style.json', true),
       })
 
       let converterType: ReturnType<typeof makeReverse1999Type>
@@ -114,6 +117,7 @@ function makeReverse1999Type(l?: { language: LanguageRow[]; languageServer: Lang
         career: z.number().int().min(1).max(6),
         dmgType: z.number().int().min(1).max(2),
         skinId: z.number().int(),
+        heroType: z.number().int().min(0).max(6),
       }),
     ),
     exItems: z.array(
@@ -159,9 +163,27 @@ function makeReverse1999Type(l?: { language: LanguageRow[]; languageServer: Lang
     exCharacterTalent: z.array(
       z.object({
         talentId: z.number(),
+        talentMould: z.number(),
         heroId: z.number(),
         consume: consume,
         requirement: z.number(),
+      }),
+    ),
+    exTalentStyleCost: z.array(
+      z.object({
+        heroId: z.number(),
+        styleId: z.number(),
+        consume: consume,
+      }),
+    ),
+    exTalentStyle: z.array(
+      z.object({
+        talentMould: z.number(),
+        styleId: z.number(),
+        level: z.union([z.literal(0), z.literal(10)]),
+        name: LanguageString,
+        tagicon: z.string(),
+        color: z.union([z.literal(''), z.string().regex(/^#[0-9a-fA-F]{6}$/)]),
       }),
     ),
   })

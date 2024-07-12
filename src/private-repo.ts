@@ -1,7 +1,7 @@
-import { readFile } from 'fs/promises'
+import { readFile, stat } from 'fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { simpleGit, SimpleGit } from 'simple-git'
+import { SimpleGit, simpleGit } from 'simple-git'
 
 export function getPrivateBase() {
   return path.resolve(fileURLToPath(import.meta.url), '../../private')
@@ -22,5 +22,11 @@ export class PrivateRepo {
 
   public async read(file: string) {
     return readFile(path.join(this.name, file))
+  }
+
+  public async exists(file: string) {
+    if (await stat(path.join(this.name, file)).catch(() => null)) {
+      return true
+    }
   }
 }
