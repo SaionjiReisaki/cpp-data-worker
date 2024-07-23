@@ -27,7 +27,8 @@ runExit(
       'arknights-yituliu-values': () => makeArknightsYituliuValues(),
       'arknights-yituliu-operatorsurvey': () => makeArknightsYituliuOperatorSurvey(),
       'reverse1999-hisboundenduty-drops-china': () => makeReverse1999HisboundenDutyDrops('china'),
-      'reverse1999-hisboundenduty-drops-values': () => makeReverse1999HisboundenDutyValues('china'),
+      'reverse1999-hisboundenduty-drops-haiwai': () => makeReverse1999HisboundenDutyDrops('haiwai'),
+      'reverse1999-hisboundenduty-values-china': () => makeReverse1999HisboundenDutyValues('china'),
     } as Record<string, () => Promise<void>>
 
     private privateTasks = {
