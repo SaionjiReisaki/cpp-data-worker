@@ -53,6 +53,9 @@ export async function makeArknightsYituliuOperatorSurvey() {
         shit(op.modX)
         shit(op.modY)
         shit(op.modD)
+        if ('modA' in op && op.modA) {
+          shit(op.modA)
+        }
       })
       const data = unwrapZod(Shape.safeParse(raw.data))
       return [data, Shape]
@@ -83,6 +86,7 @@ const Shape = z.object({
       modX: SurveyItem,
       modY: SurveyItem,
       modD: SurveyItem,
+      modA: SurveyItem.optional(),
     }),
   ),
   userCount: z.number().int().nonnegative(),
