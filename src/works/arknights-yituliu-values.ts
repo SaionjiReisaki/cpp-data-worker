@@ -48,10 +48,8 @@ const Origin = z.object({
       id: z.number(),
       itemId: z.string(),
       itemName: z.string(),
-      itemValue: z.number(),
       itemValueAp: z.number(),
       rarity: z.number().int().min(1).max(5),
-      type: z.string(),
       cardNum: z.number(),
       version: z.string(),
       weight: z.number(),
@@ -63,7 +61,6 @@ const Shape = z.array(
   z.object({
     itemId: z.string(),
     itemName: z.string(),
-    itemValue: z.number().nonnegative(),
     itemValueAp: z.number().nonnegative(),
     rarity: z.number().int().min(1).max(5),
   }),
