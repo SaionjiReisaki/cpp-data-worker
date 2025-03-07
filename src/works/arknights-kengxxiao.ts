@@ -177,7 +177,7 @@ export const ArknightsKengxxiao = z.object({
         // usage: z.union([z.string(), z.null()]),
         rarity: rarity,
         sortId: z.number(),
-        itemType: z.string(),
+        itemType: z.union([z.string(), z.number()]),
         classifyType: z.string(),
       }),
     ),
