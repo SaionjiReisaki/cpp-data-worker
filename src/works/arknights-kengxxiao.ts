@@ -119,7 +119,7 @@ const stage = z.object({
   zoneId: z.string(),
   code: z.string(),
   name: z.union([z.string(), z.null()]),
-  difficulty: z.enum(['NORMAL', 'FOUR_STAR']),
+  difficulty: z.enum(['NORMAL', 'FOUR_STAR', 'SIX_STAR']),
   diffGroup: z.enum(['NONE', 'EASY', 'NORMAL', 'TOUGH', 'ALL']),
   apCost: z.number(),
 })
@@ -250,6 +250,8 @@ export const ArknightsKengxxiao = z.object({
           'GUIDE',
           'ROGUELIKE',
           'BRANCHLINE',
+          'MAINLINE_ACTIVITY',
+          'MAINLINE_RETRO',
         ]),
       }),
     ),
