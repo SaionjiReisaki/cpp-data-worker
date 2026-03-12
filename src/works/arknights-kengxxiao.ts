@@ -117,7 +117,7 @@ const character = {
 const stage = z.object({
   stageId: z.string(),
   zoneId: z.string(),
-  code: z.string().optional(),
+  code: z.union([z.string(), z.null()]),
   name: z.union([z.string(), z.null()]),
   difficulty: z.enum(['NORMAL', 'FOUR_STAR', 'SIX_STAR']),
   diffGroup: z.enum(['NONE', 'EASY', 'NORMAL', 'TOUGH', 'ALL']),
