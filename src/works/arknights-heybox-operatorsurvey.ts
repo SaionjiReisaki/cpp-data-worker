@@ -33,6 +33,10 @@ export async function makeArknightsHeyboxOperatorSurvey() {
             .map((x) => parseInt(x, 10)),
         ),
       )
+      if (now.getTime() === 0 || !Number.isFinite(now.getTime())) {
+        throw new Error('Unexpected data')
+      }
+
       const nowText = now.toJSON()
       const version = {
         id: nowText,
