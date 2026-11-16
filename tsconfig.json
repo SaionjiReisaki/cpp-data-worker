@@ -12,6 +12,7 @@
     "removeComments": false,
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
+    "rootDir": "src",
     "lib": ["DOM", "ESNext"],
     "allowUnreachableCode": true
   },

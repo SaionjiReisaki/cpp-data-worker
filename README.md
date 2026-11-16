@@ -10,6 +10,6 @@ The toolchain comes from a [nix](https://nixos.org) devshell in `.nix/`, pinned 
 
 ```shell
 $ direnv allow                 # or: nix develop path:$PWD/.nix
-$ yarn install
-$ yarn tsx src '<work>'
+$ pnpm install
+$ pnpm tsx src '<work>'
 ```

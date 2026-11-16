@@ -21,10 +21,10 @@ jobs:
       # Same pinned devshell as local development (.nix/flake.lock).
       - name: Install dependencies
         run: |
-          nix develop "path:$PWD/.nix" --command yarn
+          nix develop "path:$PWD/.nix" --command pnpm install --frozen-lockfile
 
       - name: Work!
         env:
           REPO_GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         run: |
-          nix develop "path:$PWD/.nix" --command yarn tsx src '*' --push
+          nix develop "path:$PWD/.nix" --command pnpm tsx src '*' --push

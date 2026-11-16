@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "trailingComma": "all",
+  "semi": false,
+  "printWidth": 120,
+  // .editorconfig 写着 insert_final_newline = false，oxfmt 会照做；prettier 不读这一项，现有文件都带结尾换行。
+  "insertFinalNewline": true,
+  "sortPackageJson": false,
+  "ignorePatterns": ["pnpm-lock.yaml"]
+}
