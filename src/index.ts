@@ -7,7 +7,6 @@ import { getRepoDir, getRepoFilesDir, getRepoVersionsDir, getWorkDir } from './r
 import { makeArknightsHeyboxOperatorSurvey } from './works/arknights-heybox-operatorsurvey.js'
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
 import { makeArknightsYituliuOperatorSurvey } from './works/arknights-yituliu-operatorsurvey.js'
-import { makeArknightsYituliuValues } from './works/arknights-yituliu-values.js'
 import { makeReverse1999EnigmaticNebula } from './works/reverse1999-enigmaticnebula.js'
 import { makeReverse1999HisboundenDutyDrops } from './works/reverse1999-hisboundenduty-drops.js'
 import { makeReverse1999HisboundenDutyValues } from './works/reverse1999-hisboundenduty-values.js'
@@ -24,7 +23,6 @@ runExit(
       'arknights-kengxxiao-ja_JP': () => makeArknightsKengxxiao('ja_JP'),
       'arknights-kengxxiao-ko_KR': () => makeArknightsKengxxiao('ko_KR'),
       'arknights-heybox-operatorsurvey': () => makeArknightsHeyboxOperatorSurvey(),
-      'arknights-yituliu-values': () => makeArknightsYituliuValues(),
       'arknights-yituliu-operatorsurvey': () => makeArknightsYituliuOperatorSurvey(),
       'reverse1999-hisboundenduty-drops-china': () => makeReverse1999HisboundenDutyDrops('china'),
       'reverse1999-hisboundenduty-drops-haiwai': () => makeReverse1999HisboundenDutyDrops('haiwai'),
