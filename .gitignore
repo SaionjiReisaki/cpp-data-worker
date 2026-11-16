@@ -13,3 +13,5 @@ dist
 /private/
 /.env
 /.vscode/launch.json
+/.direnv/
+/result

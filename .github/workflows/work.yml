@@ -14,15 +14,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install asdf & tools
-        uses: asdf-vm/actions/install@v4
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
 
+      # Same pinned devshell as local development (.nix/flake.lock).
       - name: Install dependencies
         run: |
-          yarn
+          nix develop "path:$PWD/.nix" --command yarn
 
       - name: Work!
         env:
           REPO_GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         run: |
-          yarn tsx src '*' --push
+          nix develop "path:$PWD/.nix" --command yarn tsx src '*' --push
