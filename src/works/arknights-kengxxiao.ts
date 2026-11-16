@@ -1,20 +1,38 @@
 import pProps from 'p-props'
-import { z } from 'zod'
+import { ZodTypeAny, z } from 'zod'
 import { buildData, dataContainerVersionFromGitCommit } from '../dc-utils.js'
 import { fetchGitHubFile, getGitHubLatestCommitForPath } from '../github.js'
 import { unwrapZod, zodTransformUnion } from '../zutils.js'
 
-export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' | 'ko_KR') {
+type Lang = 'zh_CN' | 'en_US' | 'ja_JP' | 'ko_KR'
+
+// Kengxxiao/ArknightsGameData_YoStar was archived on 2025-11-13, so the global servers come from
+// ArknightsAssets/ArknightsGamedata, which lays out the same excel tables under its own region names.
+const sources: Record<Lang, { repo: string; branch: string; dir: string }> = {
+  zh_CN: { repo: 'Kengxxiao/ArknightsGameData', branch: 'master', dir: 'zh_CN' },
+  en_US: { repo: 'ArknightsAssets/ArknightsGamedata', branch: 'master', dir: 'en' },
+  ja_JP: { repo: 'ArknightsAssets/ArknightsGamedata', branch: 'master', dir: 'jp' },
+  ko_KR: { repo: 'ArknightsAssets/ArknightsGamedata', branch: 'master', dir: 'kr' },
+}
+
+export async function makeArknightsKengxxiao(lang: Lang) {
   const file = 'arknights-kengxxiao-' + lang
-  const repo = lang === 'zh_CN' ? 'Kengxxiao/ArknightsGameData' : 'Kengxxiao/ArknightsGameData_YoStar'
-  const branch = lang === 'zh_CN' ? 'master' : 'main'
+  const { repo, branch, dir } = sources[lang]
 
   await buildData(
     file,
     async () => {
-      const commit = await getGitHubLatestCommitForPath(repo, branch, lang)
+      const commit = await getGitHubLatestCommitForPath(repo, branch, dir)
       const version = dataContainerVersionFromGitCommit(repo, commit)
       version.text = commit.commit.message
+      if (repo !== 'Kengxxiao/ArknightsGameData') {
+        // Its commit messages list every region updated in one run ("Arknights update cn,jp,kr,tw"),
+        // which says nothing about this region's game version.
+        const dataVersion = Buffer.from(
+          await fetchGitHubFile(repo, commit.sha, dir + '/gamedata/excel/data_version.txt'),
+        ).toString('utf-8')
+        version.text = dataVersion.match(/^VersionControl:(.+)$/m)?.[1]?.trim() ?? version.text
+      }
       version.schema = 3
       return [version, commit]
     },
@@ -25,21 +43,29 @@ export async function makeArknightsKengxxiao(lang: 'zh_CN' | 'en_US' | 'ja_JP' |
       }
 
       const raw = await pProps({
-        exCharacters: work(lang + '/gamedata/excel/character_table.json'),
-        exPatchCharacters: work(lang + '/gamedata/excel/char_patch_table.json'),
-        exSkin: work(lang + '/gamedata/excel/skin_table.json'),
-        exSkills: work(lang + '/gamedata/excel/skill_table.json'),
-        exUniEquips: work(lang + '/gamedata/excel/uniequip_table.json'),
-        exItems: work(lang + '/gamedata/excel/item_table.json'),
-        exBuilding: work(lang + '/gamedata/excel/building_data.json'),
-        exStage: work(lang + '/gamedata/excel/stage_table.json'),
-        exRetro: work(lang + '/gamedata/excel/retro_table.json'),
-        exZone: work(lang + '/gamedata/excel/zone_table.json'),
+        exCharacters: work(dir + '/gamedata/excel/character_table.json'),
+        exPatchCharacters: work(dir + '/gamedata/excel/char_patch_table.json'),
+        exSkin: work(dir + '/gamedata/excel/skin_table.json'),
+        exSkills: work(dir + '/gamedata/excel/skill_table.json'),
+        exUniEquips: work(dir + '/gamedata/excel/uniequip_table.json'),
+        exItems: work(dir + '/gamedata/excel/item_table.json'),
+        exBuilding: work(dir + '/gamedata/excel/building_data.json'),
+        exStage: work(dir + '/gamedata/excel/stage_table.json'),
+        exRetro: work(dir + '/gamedata/excel/retro_table.json'),
+        exZone: work(dir + '/gamedata/excel/zone_table.json'),
       })
 
       const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
       return [data, ArknightsKengxxiao]
     },
+  )
+}
+
+// ArknightsAssets dumps an empty array as {}; read it back as [] so both sources give the same data.
+function array<T extends ZodTypeAny>(item: T) {
+  return z.preprocess(
+    (v) => (v !== null && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0 ? [] : v),
+    z.array(item),
   )
 }
 
@@ -86,30 +112,28 @@ const character = {
     'TOKEN',
   ]),
   rarity: rarity,
-  skills: z.array(
+  skills: array(
     z.object({
       skillId: z.union([z.string(), z.null()]),
-      levelUpCostCond: z
-        .array(
-          z.object({
-            unlockCond: unlockCond,
-            lvlUpTime: z.number(),
-            levelUpCost: z.union([z.array(levelUpCost), z.null()]),
-          }),
-        )
-        .optional(),
+      levelUpCostCond: array(
+        z.object({
+          unlockCond: unlockCond,
+          lvlUpTime: z.number(),
+          levelUpCost: z.union([array(levelUpCost), z.null()]),
+        }),
+      ).optional(),
     }),
   ),
-  allSkillLvlup: z.array(
+  allSkillLvlup: array(
     z.object({
       unlockCond: unlockCond,
-      lvlUpCost: z.union([z.array(levelUpCost), z.null()]),
+      lvlUpCost: z.union([array(levelUpCost), z.null()]),
     }),
   ),
-  phases: z.array(
+  phases: array(
     z.object({
       maxLevel: z.number(),
-      evolveCost: z.union([z.array(levelUpCost), z.null()]),
+      evolveCost: z.union([array(levelUpCost), z.null()]),
     }),
   ),
 }
@@ -129,7 +153,7 @@ export const ArknightsKengxxiao = z.object({
   exPatchCharacters: z.object({
     infos: z.record(
       z.object({
-        tmplIds: z.array(z.string()),
+        tmplIds: array(z.string()),
         default: z.string(),
       }),
     ),
@@ -143,7 +167,7 @@ export const ArknightsKengxxiao = z.object({
     z.object({
       skillId: z.string(),
       iconId: z.union([z.string(), z.null()]),
-      levels: z.array(
+      levels: array(
         z.object({
           name: z.string(),
         }),
@@ -162,10 +186,10 @@ export const ArknightsKengxxiao = z.object({
         equipShiningColor: z.string(),
         charEquipOrder: z.number(),
         typeIcon: z.string(),
-        itemCost: z.union([z.record(z.array(levelUpCost)), z.null()]),
+        itemCost: z.union([z.record(array(levelUpCost)), z.null()]),
       }),
     ),
-    charEquip: z.record(z.array(z.string())),
+    charEquip: z.record(array(z.string())),
   }),
   exItems: z.object({
     items: z.record(
@@ -199,14 +223,14 @@ export const ArknightsKengxxiao = z.object({
         apCost: z.number(),
         formulaType: z.enum(['F_BUILDING', 'F_ASC', 'F_EVOLVE', 'F_SKILL']),
         extraOutcomeRate: z.number(),
-        extraOutcomeGroup: z.array(
+        extraOutcomeGroup: array(
           z.object({
             weight: z.number(),
             itemId: z.string(),
             itemCount: z.number(),
           }),
         ),
-        costs: z.array(levelUpCost),
+        costs: array(levelUpCost),
       }),
     ),
     manufactFormulas: z.record(
@@ -214,7 +238,7 @@ export const ArknightsKengxxiao = z.object({
         formulaId: z.string(),
         itemId: z.string(),
         count: z.number(),
-        costs: z.array(levelUpCost),
+        costs: array(levelUpCost),
         formulaType: z.enum(['F_EXP', 'F_ASC', 'F_GOLD', 'F_DIAMOND']),
       }),
     ),
