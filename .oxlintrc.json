@@ -19,5 +19,11 @@
     "typescript/no-unsafe-member-access": "off",
     "typescript/no-unsafe-return": "off"
   },
-  "ignorePatterns": ["dist/**", "work/**", "private/**"]
+  "ignorePatterns": [
+    "dist/**",
+    "work/**",
+    "private/**",
+    // 主 checkout 下的 agent worktree
+    ".claude/**"
+  ]
 }

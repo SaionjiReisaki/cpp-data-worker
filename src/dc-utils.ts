@@ -45,7 +45,7 @@ async function writeData(data: IDataContainer, schema: Zod.AnyZodObject) {
 export async function buildData<R extends any[] = [], T extends object = object>(
   name: string,
   buildVersion: () => Promise<readonly [IDataContainerHeader['version'], ...R]>,
-  buildData: (...args: R) => Promise<readonly [T, z.AnyZodObject]>,
+  buildData: (...args: R) => readonly [T, z.AnyZodObject] | Promise<readonly [T, z.AnyZodObject]>,
 ) {
   console.log('fetching version for', name)
   const [version, ...args] = await buildVersion()

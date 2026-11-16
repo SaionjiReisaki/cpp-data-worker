@@ -81,7 +81,7 @@ export async function makeArknightsHeyboxOperatorSurvey() {
 
       return [version, final]
     },
-    async (data) => {
+    (data) => {
       return [data, Shape]
     },
   )

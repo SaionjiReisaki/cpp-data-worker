@@ -23,7 +23,7 @@ export async function makeReverse1999HisboundenDutyValues(branch: 'china') {
       version.schema = 1
       return [version, data]
     },
-    async (raw) => {
+    (raw) => {
       const data = unwrapZod(Shape.safeParse(raw))
       return [data, Shape]
     },
