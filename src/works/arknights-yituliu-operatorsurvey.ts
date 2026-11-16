@@ -41,11 +41,12 @@ export async function makeArknightsYituliuOperatorSurvey() {
           return {
             charId: row.charId,
             rarity: parseInt(char.rarity.replace(/^TIER_/, ''), 10),
+            sampleSize: row.sampleSize,
             own: ratio(row.own, row.sampleSize),
             elite: item(row.elite, row.own),
-            skill1: item(row.skill1, row.own),
-            skill2: item(row.skill2, row.own),
-            skill3: item(row.skill3, row.own),
+            skill1: item(skillCounts(row.skill1), row.own),
+            skill2: item(skillCounts(row.skill2), row.own),
+            skill3: item(skillCounts(row.skill3), row.own),
             modX: item(row.modX, row.own),
             modY: item(row.modY, row.own),
             modD: item(row.modD, row.own),
@@ -66,8 +67,20 @@ function ratio(a: number, b: number) {
   return b === 0 ? 0 : a / b
 }
 
-// Upstream counts players per level; the published shape keeps the old endpoint's fractions of owners. Levels above
-// 3 are bogus submissions and are left out of every rank, so ranks may sum to slightly less than 1.
+// Some players enter the skill level on a 1–10 scale in the mastery field: 1–7 is the plain skill level and 8–10 is
+// mastery 1–3. Levels 4–10 can only come from that scale, so they are folded back into mastery ranks.
+function skillCounts(counts: Record<string, number>) {
+  const folded: Record<string, number> = {}
+  for (const [level, n] of Object.entries(counts)) {
+    const l = parseInt(level, 10)
+    const rank = l <= 3 || l > 10 ? l : l <= 7 ? 0 : l - 7
+    folded[rank] = (folded[rank] ?? 0) + n
+  }
+  return folded
+}
+
+// Upstream counts players per level; the published shape keeps the old endpoint's fractions of owners. Levels that
+// are still above 3 are bogus submissions and are left out of every rank, so ranks may sum to slightly less than 1.
 function item(counts: Record<string, number>, own: number) {
   if (own === 0) return { rank0: 1, rank1: 0, rank2: 0, rank3: 0, count: 0 }
   const rank1 = ratio(counts['1'] ?? 0, own)
@@ -116,6 +129,7 @@ const Shape = z.object({
     z.object({
       charId: z.string().regex(/^char_\d+_/),
       rarity: z.number().int().min(1).max(6),
+      sampleSize: z.number().int().positive(),
       own: SurveyNumber,
       elite: SurveyItem,
       skill1: SurveyItem,
