@@ -33,7 +33,7 @@ export async function makeArknightsKengxxiao(lang: Lang) {
         ).toString('utf-8')
         version.text = dataVersion.match(/^VersionControl:(.+)$/m)?.[1]?.trim() ?? version.text
       }
-      version.schema = 3
+      version.schema = 4
       return [version, commit]
     },
     async (commit) => {
@@ -53,6 +53,7 @@ export async function makeArknightsKengxxiao(lang: Lang) {
         exStage: work(dir + '/gamedata/excel/stage_table.json'),
         exRetro: work(dir + '/gamedata/excel/retro_table.json'),
         exZone: work(dir + '/gamedata/excel/zone_table.json'),
+        exEnemies: work(dir + '/gamedata/excel/enemy_handbook_table.json'),
       })
 
       const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
@@ -111,6 +112,7 @@ const character = {
     'TRAP',
     'TOKEN',
   ]),
+  position: z.enum(['MELEE', 'RANGED', 'ALL', 'NONE']),
   rarity: rarity,
   skills: array(
     z.object({
@@ -187,6 +189,18 @@ export const ArknightsKengxxiao = z.object({
         charEquipOrder: z.number(),
         typeIcon: z.string(),
         itemCost: z.union([z.record(array(levelUpCost)), z.null()]),
+        tmplId: z.union([z.string(), z.null()]),
+        missionList: array(z.string()),
+      }),
+    ),
+    missionList: z.record(
+      z.object({
+        template: z.string(),
+        desc: z.string(),
+        paramList: array(z.string()),
+        uniEquipId: z.string(),
+        uniEquipMissionSort: z.number(),
+        jumpStageId: z.union([z.string(), z.null()]),
       }),
     ),
     charEquip: z.record(array(z.string())),
@@ -277,6 +291,14 @@ export const ArknightsKengxxiao = z.object({
           'MAINLINE_ACTIVITY',
           'MAINLINE_RETRO',
         ]),
+      }),
+    ),
+  }),
+  exEnemies: z.object({
+    enemyData: z.record(
+      z.object({
+        name: z.string(),
+        enemyLevel: z.enum(['NORMAL', 'ELITE', 'BOSS']),
       }),
     ),
   }),
