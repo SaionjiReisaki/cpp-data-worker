@@ -6,6 +6,7 @@ import { minimatch } from 'minimatch'
 import { getRepoDir, getRepoFilesDir, getRepoVersionsDir, getWorkDir } from './repo.js'
 import { makeArknightsHeyboxOperatorSurvey } from './works/arknights-heybox-operatorsurvey.js'
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
+import { makeArknightsKengxxiaoDetails } from './works/arknights-kengxxiao-details.js'
 import { makeArknightsYituliuOperatorSurvey } from './works/arknights-yituliu-operatorsurvey.js'
 import { makeReverse1999EnigmaticNebula } from './works/reverse1999-enigmaticnebula.js'
 import { makeReverse1999HisboundenDutyDrops } from './works/reverse1999-hisboundenduty-drops.js'
@@ -22,6 +23,10 @@ runExit(
       'arknights-kengxxiao-en_US': () => makeArknightsKengxxiao('en_US'),
       'arknights-kengxxiao-ja_JP': () => makeArknightsKengxxiao('ja_JP'),
       'arknights-kengxxiao-ko_KR': () => makeArknightsKengxxiao('ko_KR'),
+      'arknights-kengxxiao-details-zh_CN': () => makeArknightsKengxxiaoDetails('zh_CN'),
+      'arknights-kengxxiao-details-en_US': () => makeArknightsKengxxiaoDetails('en_US'),
+      'arknights-kengxxiao-details-ja_JP': () => makeArknightsKengxxiaoDetails('ja_JP'),
+      'arknights-kengxxiao-details-ko_KR': () => makeArknightsKengxxiaoDetails('ko_KR'),
       'arknights-heybox-operatorsurvey': () => makeArknightsHeyboxOperatorSurvey(),
       'arknights-yituliu-operatorsurvey': () => makeArknightsYituliuOperatorSurvey(),
       'reverse1999-hisboundenduty-drops-china': () => makeReverse1999HisboundenDutyDrops('china'),

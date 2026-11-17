@@ -4,7 +4,7 @@ import { buildData, dataContainerVersionFromGitCommit } from '../dc-utils.js'
 import { fetchGitHubFile, getGitHubLatestCommitForPath } from '../github.js'
 import { unwrapZod, zodTransformUnion } from '../zutils.js'
 
-type Lang = 'zh_CN' | 'en_US' | 'ja_JP' | 'ko_KR'
+export type Lang = 'zh_CN' | 'en_US' | 'ja_JP' | 'ko_KR'
 
 // Kengxxiao/ArknightsGameData_YoStar was archived on 2025-11-13, so the global servers come from
 // ArknightsAssets/ArknightsGamedata, which lays out the same excel tables under its own region names.
@@ -15,45 +15,54 @@ const sources: Record<Lang, { repo: string; branch: string; dir: string }> = {
   ko_KR: { repo: 'ArknightsAssets/ArknightsGamedata', branch: 'master', dir: 'kr' },
 }
 
+/** Every container built from one region's game data carries this version: the client compares them by version.id. */
+export async function buildKengxxiaoVersion(lang: Lang) {
+  const { repo, branch, dir } = sources[lang]
+  const commit = await getGitHubLatestCommitForPath(repo, branch, dir)
+  const version = dataContainerVersionFromGitCommit(repo, commit)
+  version.text = commit.commit.message
+  if (repo !== 'Kengxxiao/ArknightsGameData') {
+    // Its commit messages list every region updated in one run ("Arknights update cn,jp,kr,tw"),
+    // which says nothing about this region's game version.
+    const dataVersion = Buffer.from(
+      await fetchGitHubFile(repo, commit.sha, dir + '/gamedata/excel/data_version.txt'),
+    ).toString('utf-8')
+    version.text = dataVersion.match(/^VersionControl:(.+)$/m)?.[1]?.trim() ?? version.text
+  }
+  return [version, commit] as const
+}
+
+export async function fetchKengxxiaoExcel(lang: Lang, commit: { sha: string }, table: string) {
+  const { repo, dir } = sources[lang]
+  const r = await fetchGitHubFile(repo, commit.sha, `${dir}/gamedata/excel/${table}.json`)
+  return JSON.parse(Buffer.from(r).toString('utf-8'))
+}
+
 export async function makeArknightsKengxxiao(lang: Lang) {
   const file = 'arknights-kengxxiao-' + lang
-  const { repo, branch, dir } = sources[lang]
 
   await buildData(
     file,
     async () => {
-      const commit = await getGitHubLatestCommitForPath(repo, branch, dir)
-      const version = dataContainerVersionFromGitCommit(repo, commit)
-      version.text = commit.commit.message
-      if (repo !== 'Kengxxiao/ArknightsGameData') {
-        // Its commit messages list every region updated in one run ("Arknights update cn,jp,kr,tw"),
-        // which says nothing about this region's game version.
-        const dataVersion = Buffer.from(
-          await fetchGitHubFile(repo, commit.sha, dir + '/gamedata/excel/data_version.txt'),
-        ).toString('utf-8')
-        version.text = dataVersion.match(/^VersionControl:(.+)$/m)?.[1]?.trim() ?? version.text
-      }
+      const [version, commit] = await buildKengxxiaoVersion(lang)
       version.schema = 4
       return [version, commit]
     },
     async (commit) => {
-      const work = async function (p: string) {
-        const r = await fetchGitHubFile(repo, commit.sha, p)
-        return JSON.parse(Buffer.from(r).toString('utf-8'))
-      }
+      const work = (table: string) => fetchKengxxiaoExcel(lang, commit, table)
 
       const raw = await pProps({
-        exCharacters: work(dir + '/gamedata/excel/character_table.json'),
-        exPatchCharacters: work(dir + '/gamedata/excel/char_patch_table.json'),
-        exSkin: work(dir + '/gamedata/excel/skin_table.json'),
-        exSkills: work(dir + '/gamedata/excel/skill_table.json'),
-        exUniEquips: work(dir + '/gamedata/excel/uniequip_table.json'),
-        exItems: work(dir + '/gamedata/excel/item_table.json'),
-        exBuilding: work(dir + '/gamedata/excel/building_data.json'),
-        exStage: work(dir + '/gamedata/excel/stage_table.json'),
-        exRetro: work(dir + '/gamedata/excel/retro_table.json'),
-        exZone: work(dir + '/gamedata/excel/zone_table.json'),
-        exEnemies: work(dir + '/gamedata/excel/enemy_handbook_table.json'),
+        exCharacters: work('character_table'),
+        exPatchCharacters: work('char_patch_table'),
+        exSkin: work('skin_table'),
+        exSkills: work('skill_table'),
+        exUniEquips: work('uniequip_table'),
+        exItems: work('item_table'),
+        exBuilding: work('building_data'),
+        exStage: work('stage_table'),
+        exRetro: work('retro_table'),
+        exZone: work('zone_table'),
+        exEnemies: work('enemy_handbook_table'),
       })
 
       const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
@@ -63,7 +72,7 @@ export async function makeArknightsKengxxiao(lang: Lang) {
 }
 
 // ArknightsAssets dumps an empty array as {}; read it back as [] so both sources give the same data.
-function array<T extends ZodTypeAny>(item: T) {
+export function array<T extends ZodTypeAny>(item: T) {
   return z.preprocess(
     (v) => (v !== null && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0 ? [] : v),
     z.array(item),
