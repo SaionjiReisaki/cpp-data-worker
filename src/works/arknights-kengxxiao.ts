@@ -45,7 +45,7 @@ export async function makeArknightsKengxxiao(lang: Lang) {
     file,
     async () => {
       const [version, commit] = await buildKengxxiaoVersion(lang)
-      version.schema = 4
+      version.schema = 5
       return [version, commit]
     },
     async (commit) => {
@@ -63,12 +63,95 @@ export async function makeArknightsKengxxiao(lang: Lang) {
         exRetro: work('retro_table'),
         exZone: work('zone_table'),
         exEnemies: work('enemy_handbook_table'),
+        exShop: work('shop_client_table'),
       })
+      raw.exSkin = slimSkins(raw.exSkin)
+      raw.exShop = slimShop(raw.exShop)
 
       const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
       return [data, ArknightsKengxxiao]
     },
   )
+}
+
+// Slimmed before parsing so that the schema, and the .ts type generated from it, describe what the client reads.
+// The skin table also carries each skin's story, colours and voice; a skin id without @ is an elite phase's default
+// art, not a skin.
+function slimSkins(exSkin: any) {
+  const charSkins: Record<string, unknown> = {}
+  for (const [skinId, skin] of Object.entries<any>(exSkin.charSkins)) {
+    if (!skinId.includes('@')) continue
+    const d = skin.displaySkin
+    charSkins[skinId] = {
+      skinId: skin.skinId,
+      charId: skin.charId,
+      tmplId: skin.tmplId,
+      dynIllust: !!skin.dynIllustId,
+      displaySkin: {
+        skinName: d.skinName,
+        skinGroupId: d.skinGroupId,
+        skinGroupName: d.skinGroupName,
+        sortId: d.sortId,
+        getTime: d.getTime,
+        obtainApproach: d.obtainApproach,
+        displayTagId: d.displayTagId,
+      },
+    }
+  }
+
+  const brandList: Record<string, unknown> = {}
+  for (const [brandId, brand] of Object.entries<any>(exSkin.brandList)) {
+    brandList[brandId] = {
+      brandId: brand.brandId,
+      // zh_CN writes one brand as "巫异盛宴 ".
+      brandName: brand.brandName.trim(),
+      brandCapitalName: brand.brandCapitalName,
+      sortId: brand.sortId,
+      groupList: list(brand.groupList).map((g) => ({ skinGroupId: g.skinGroupId })),
+    }
+  }
+
+  return {
+    buildinEvolveMap: exSkin.buildinEvolveMap,
+    buildinPatchMap: exSkin.buildinPatchMap,
+    charSkins,
+    brandList,
+  }
+}
+
+// The store's recommendation tabs and carousel, cut down to the ones that open the skin store. A tab names its skins in
+// dataList or in normalSkinParam, or names none and is titled after the skin series it sells; the client tells those
+// apart, so tabs without skins are kept.
+function slimShop(exShop: any) {
+  const recommendList = []
+  for (const tab of list(exShop.recommendList)) {
+    const items = list(tab.groupList).flatMap((g) => list(g.dataList))
+    if (!items.some((d) => d.cmd === 'SKINSHOP')) continue
+    const skins: { skinId: string; goodId: string | null }[] = []
+    const add = (skinId: string, goodId: string | null) => {
+      if (!skins.some((s) => s.skinId === skinId)) skins.push({ skinId, goodId })
+    }
+    for (const d of items) if (d.cmd === 'SKINSHOP' && d.skinId) add(d.skinId, d.param1 ?? null)
+    for (const skinId of list(tab.templateParam?.normalSkinParam?.skinIds)) add(skinId, null)
+    recommendList.push({
+      tagName: tab.tagName,
+      startDatetime: tab.startDatetime,
+      endDatetime: tab.endDatetime,
+      skins,
+    })
+  }
+
+  const carousels = list(exShop.carousels)
+    .flatMap((c) => list(c.items))
+    .filter((i) => i.cmd === 'SKINSHOP' && i.skinId)
+    .map((i) => ({ skinId: i.skinId, startTime: i.startTime, endTime: i.endTime }))
+
+  return { recommendList, carousels }
+}
+
+// The same {}-for-[] quirk as array() below, for the raw tables walked before parsing.
+function list(v: any): any[] {
+  return Array.isArray(v) ? v : []
 }
 
 // ArknightsAssets dumps an empty array as {}; read it back as [] so both sources give the same data.
@@ -173,6 +256,32 @@ export const ArknightsKengxxiao = z.object({
   exSkin: z.object({
     buildinEvolveMap: z.record(z.record(z.string())),
     buildinPatchMap: z.record(z.record(z.string())),
+    charSkins: z.record(
+      z.object({
+        skinId: z.string(),
+        charId: z.string(),
+        tmplId: z.union([z.string(), z.null()]),
+        dynIllust: z.boolean(),
+        displaySkin: z.object({
+          skinName: z.union([z.string(), z.null()]),
+          skinGroupId: z.union([z.string(), z.null()]),
+          skinGroupName: z.union([z.string(), z.null()]),
+          sortId: z.number(),
+          getTime: z.number(),
+          obtainApproach: z.union([z.string(), z.null()]),
+          displayTagId: z.union([z.string(), z.null()]),
+        }),
+      }),
+    ),
+    brandList: z.record(
+      z.object({
+        brandId: z.string(),
+        brandName: z.string(),
+        brandCapitalName: z.union([z.string(), z.null()]),
+        sortId: z.number(),
+        groupList: array(z.object({ skinGroupId: z.string() })),
+      }),
+    ),
   }),
   exSkills: z.record(
     z.object({
@@ -310,5 +419,16 @@ export const ArknightsKengxxiao = z.object({
         enemyLevel: z.enum(['NORMAL', 'ELITE', 'BOSS']),
       }),
     ),
+  }),
+  exShop: z.object({
+    recommendList: array(
+      z.object({
+        tagName: z.string(),
+        startDatetime: z.number(),
+        endDatetime: z.number(),
+        skins: array(z.object({ skinId: z.string(), goodId: z.union([z.string(), z.null()]) })),
+      }),
+    ),
+    carousels: array(z.object({ skinId: z.string(), startTime: z.number(), endTime: z.number() })),
   }),
 })
