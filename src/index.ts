@@ -7,6 +7,7 @@ import { getRepoDir, getRepoFilesDir, getRepoVersionsDir, getWorkDir } from './r
 import { makeArknightsHeyboxOperatorSurvey } from './works/arknights-heybox-operatorsurvey.js'
 import { makeArknightsKengxxiao } from './works/arknights-kengxxiao.js'
 import { makeArknightsKengxxiaoDetails } from './works/arknights-kengxxiao-details.js'
+import { makeArknightsPrtsSkins } from './works/arknights-prts-skins.js'
 import { makeArknightsYituliuOperatorSurvey } from './works/arknights-yituliu-operatorsurvey.js'
 import { makeReverse1999EnigmaticNebula } from './works/reverse1999-enigmaticnebula.js'
 import { makeReverse1999HisboundenDutyDrops } from './works/reverse1999-hisboundenduty-drops.js'
@@ -27,6 +28,8 @@ runExit(
       'arknights-kengxxiao-details-en_US': () => makeArknightsKengxxiaoDetails('en_US'),
       'arknights-kengxxiao-details-ja_JP': () => makeArknightsKengxxiaoDetails('ja_JP'),
       'arknights-kengxxiao-details-ko_KR': () => makeArknightsKengxxiaoDetails('ko_KR'),
+      // After arknights-kengxxiao-zh_CN, whose skin names it matches in the same run.
+      'arknights-prts-skins': () => makeArknightsPrtsSkins(),
       'arknights-heybox-operatorsurvey': () => makeArknightsHeyboxOperatorSurvey(),
       'arknights-yituliu-operatorsurvey': () => makeArknightsYituliuOperatorSurvey(),
       'reverse1999-hisboundenduty-drops-china': () => makeReverse1999HisboundenDutyDrops('china'),
