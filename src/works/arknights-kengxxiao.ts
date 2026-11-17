@@ -45,7 +45,7 @@ export async function makeArknightsKengxxiao(lang: Lang) {
     file,
     async () => {
       const [version, commit] = await buildKengxxiaoVersion(lang)
-      version.schema = 5
+      version.schema = 6
       return [version, commit]
     },
     async (commit) => {
@@ -372,6 +372,27 @@ export const ArknightsKengxxiao = z.object({
         count: z.number(),
         costs: array(levelUpCost),
         formulaType: z.enum(['F_EXP', 'F_ASC', 'F_GOLD', 'F_DIAMOND']),
+      }),
+    ),
+    rooms: z.record(z.object({ name: z.string() })),
+    // Base skills; their texts are in arknights-kengxxiao-details.
+    buffs: z.record(
+      z.object({
+        buffName: z.string(),
+        roomType: z.string(),
+        skillIcon: z.string(),
+        efficiency: z.number(),
+        sortId: z.number(),
+      }),
+    ),
+    // Each operator's skill slots, each slot's skills from the first to unlock to the last.
+    chars: z.record(
+      z.object({
+        buffChar: array(
+          z.object({
+            buffData: array(z.object({ buffId: z.string(), cond: unlockCond })),
+          }),
+        ),
       }),
     ),
   }),
