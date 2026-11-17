@@ -1069,12 +1069,20 @@ export function localizeEffects(effects: Effect[], names: RegionNames): Effect[]
   return missing ? null : out
 }
 
-/** Whether two texts carry the same numbers in the same order, after their tags go and full-width digits narrow. */
+/**
+ * Whether two texts are the same version of a skill: the same numbers, after their tags go and full-width digits
+ * narrow. Order, 0 and 1 do not count: the languages put a count before or after its value, and say 「每小时」 against
+ * 「1時間ごとに」, or 「全部归零」 against "becomes 0".
+ */
 export function sameNumbers(zh: string, local: string): boolean {
   const numbers = (s: string) =>
-    readMarkup(s)
-      .text.normalize('NFKC')
-      .match(/\d+(\.\d+)?/g) ?? []
+    (
+      readMarkup(s)
+        .text.normalize('NFKC')
+        .match(/\d+(\.\d+)?/g) ?? []
+    )
+      .filter((x) => Number(x) !== 0 && Number(x) !== 1)
+      .sort()
   const a = numbers(zh)
   const b = numbers(local)
   return a.length === b.length && a.every((x, i) => x === b[i])

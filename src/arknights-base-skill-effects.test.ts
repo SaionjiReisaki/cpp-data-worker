@@ -355,6 +355,24 @@ describe('sameNumbers', () => {
   it('reads full-width digits as their narrow forms', () => {
     expect(sameNumbers('生产力<@cc.vup>+15%</>', '生産力<@cc.vup>＋１５％</>')).toBe(true)
   })
+
+  it('counts neither the order nor 0 and 1', () => {
+    expect(
+      sameNumbers(
+        '进驻发电站时，每<@cc.vup>10</>架无人机上限<@cc.vup>+1%</>无人机充能速度（最多<@cc.vup>+25%</>）',
+        'When this Operator is assigned to a Power Plant, <@cc.vup>+1%</> Drone recovery rate for every <@cc.vup>10</> max Drone capacity (Max <@cc.vup>+25%</>)',
+      ),
+    ).toBe(true)
+    expect(
+      sameNumbers(
+        '进驻控制中枢时，控制中枢内所有干员的心情每小时恢复<@cc.vup>+0.05</>',
+        '制御中枢配置時、制御中枢内全員の体力が1時間ごとに<@cc.vup>+0.05</>回復',
+      ),
+    ).toBe(true)
+    expect(
+      sameNumbers('生产力<@cc.vdown>全部归零</>，每个发电站<@cc.vup>+5%</>', '製造効率を０にする。1か所につき+5%'),
+    ).toBe(true)
+  })
 })
 
 describe('localizeEffects', () => {
