@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "lint": "oxlint --type-aware",
-    "fmt": "oxfmt"
+    "fmt": "oxfmt",
+    "test": "vitest run --dir src"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
@@ -15,7 +16,8 @@
     "oxlint": "^1.93.0",
     "oxlint-tsgolint": "^7.0.2007",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "@actions/core": "^1.10.1",

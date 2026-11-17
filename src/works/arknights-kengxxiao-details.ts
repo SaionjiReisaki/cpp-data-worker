@@ -1,5 +1,13 @@
 import pProps from 'p-props'
 import { z } from 'zod'
+import {
+  Effect,
+  localizeEffects,
+  nounTables,
+  parseBuff,
+  regionNames,
+  sameNumbers,
+} from '../arknights-base-skill-effects.js'
 import { buildData } from '../dc-utils.js'
 import { unwrapZod } from '../zutils.js'
 import { Lang, array, buildKengxxiaoVersion, fetchKengxxiaoExcel } from './arknights-kengxxiao.js'
@@ -13,29 +21,96 @@ export async function makeArknightsKengxxiaoDetails(lang: Lang) {
     file,
     async () => {
       const [version, commit] = await buildKengxxiaoVersion(lang)
-      version.schema = 1
-      return [version, commit]
+      // Bump it when the base skill rules change too: the containers are only rebuilt for a new version or schema.
+      version.schema = 2
+      if (lang === 'zh_CN') return [version, commit, commit] as const
+      // Base skill effects are read from zh_CN's texts, so a newer zh_CN rebuilds this region's details as well.
+      const [zhVersion, zhCommit] = await buildKengxxiaoVersion('zh_CN')
+      version.sources.push(...zhVersion.sources)
+      return [version, commit, zhCommit] as const
     },
-    async (commit) => {
+    async (commit, zhCommit) => {
       const work = (table: string) => fetchKengxxiaoExcel(lang, commit, table)
 
-      const raw = unwrapZod(
-        Source.safeParse(
-          await pProps({
-            exSkills: work('skill_table'),
-            exBattleEquips: work('battle_equip_table'),
-            exConst: work('gamedata_const'),
-          }),
-        ),
-      )
+      const local = await pProps({
+        exSkills: work('skill_table'),
+        exBattleEquips: work('battle_equip_table'),
+        exConst: work('gamedata_const'),
+        exBuilding: work('building_data'),
+        exCharacters: work('character_table'),
+        exItems: work('item_table'),
+        exUniEquips: work('uniequip_table'),
+      })
+      const zh =
+        lang === 'zh_CN'
+          ? local
+          : await pProps({
+              exConst: fetchKengxxiaoExcel('zh_CN', zhCommit, 'gamedata_const'),
+              exBuilding: fetchKengxxiaoExcel('zh_CN', zhCommit, 'building_data'),
+              exCharacters: fetchKengxxiaoExcel('zh_CN', zhCommit, 'character_table'),
+              exItems: fetchKengxxiaoExcel('zh_CN', zhCommit, 'item_table'),
+              exUniEquips: fetchKengxxiaoExcel('zh_CN', zhCommit, 'uniequip_table'),
+            })
 
-      const data = unwrapZod(Details.safeParse(transform(raw)))
+      const raw = unwrapZod(Source.safeParse(local))
+      const data = unwrapZod(
+        Details.safeParse({ ...transform(raw), buildingBuffs: buildingBuffs(lang, raw.exBuilding, local, zh) }),
+      )
       return [data, Details]
     },
   )
 }
 
-function transform(raw: z.output<typeof Source>): z.input<typeof Details> {
+type Tables = { exConst: any; exBuilding: any; exCharacters: any; exItems: any; exUniEquips: any }
+
+// The texts are the region's own; the effects are parsed from zh_CN's text of the same skill and carry the region's
+// names. A region whose text has other numbers than zh_CN's is on another version of the skill, and gets none.
+function buildingBuffs(lang: Lang, building: z.output<typeof SourceBuilding>, local: Tables, zh: Tables) {
+  const tables = nounTables({
+    buildingData: zh.exBuilding,
+    characterTable: zh.exCharacters,
+    gamedataConst: zh.exConst,
+    itemTable: zh.exItems,
+    uniequipTable: zh.exUniEquips,
+  })
+  const names = regionNames({
+    gamedataConst: local.exConst,
+    characterTable: local.exCharacters,
+    itemTable: local.exItems,
+    uniequipTable: local.exUniEquips,
+  })
+
+  const out: z.input<typeof Details>['buildingBuffs'] = {}
+  let summarised = 0
+  const failures: string[] = []
+  for (const char of Object.values(building.chars)) {
+    for (const slot of char.buffChar) {
+      for (const { buffId } of slot.buffData) {
+        const buff = building.buffs[buffId]
+        if (!buff || out[buffId]) continue
+        out[buffId] = { text: buff.description }
+        const zhText: string | undefined = zh.exBuilding.buffs[buffId]?.description
+        if (zhText == null) continue
+        const parsed = parseBuff(zhText, zh.exBuilding.buffs[buffId].roomType, tables)
+        if ('failed' in parsed) {
+          failures.push(`  ${buffId} ${buff.buffName}: ${parsed.failed}`)
+          continue
+        }
+        if (lang !== 'zh_CN' && !sameNumbers(zhText, buff.description)) continue
+        const effects = localizeEffects(parsed.effects, names)
+        if (!effects) continue
+        out[buffId].effects = effects
+        summarised++
+      }
+    }
+  }
+
+  console.log(`base skills summarised: ${summarised} / ${Object.keys(out).length}`)
+  if (lang === 'zh_CN') console.log(`base skills not summarised:\n${failures.join('\n')}`)
+  return out
+}
+
+function transform(raw: z.output<typeof Source>): Omit<z.input<typeof Details>, 'buildingBuffs'> {
   const skills: z.input<typeof Details>['skills'] = {}
   for (const [skillId, skill] of Object.entries(raw.exSkills)) {
     if (!skill.levels.length) continue
@@ -117,7 +192,17 @@ const text = z.union([z.string(), z.null()])
 // Some fields are written as their enum number in one source and as the name in another; keep either as a string.
 const enumLike = z.union([z.string(), z.number().transform(String)])
 
+const SourceBuilding = z.object({
+  buffs: z.record(z.object({ buffName: z.string(), description: z.string() })),
+  chars: z.record(
+    z.object({
+      buffChar: array(z.object({ buffData: array(z.object({ buffId: z.string() })) })),
+    }),
+  ),
+})
+
 const Source = z.object({
+  exBuilding: SourceBuilding,
   exSkills: z.record(
     z.object({
       levels: array(
@@ -244,6 +329,14 @@ const Details = z.object({
     z.object({
       name: z.string(),
       desc: z.string(),
+    }),
+  ),
+  buildingBuffs: z.record(
+    z.object({
+      // The region's text, with the game's rich text tags
+      text: z.string(),
+      // Absent when the skill could not be summarised for this region
+      effects: z.array(Effect).optional(),
     }),
   ),
 })
