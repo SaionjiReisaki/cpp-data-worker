@@ -45,13 +45,13 @@ export async function makeArknightsKengxxiao(lang: Lang) {
     file,
     async () => {
       const [version, commit] = await buildKengxxiaoVersion(lang)
-      version.schema = 7
+      version.schema = 8
       return [version, commit]
     },
     async (commit) => {
       const work = (table: string) => fetchKengxxiaoExcel(lang, commit, table)
 
-      const raw = await pProps({
+      const { charMaster, ...raw } = await pProps({
         exCharacters: work('character_table'),
         exPatchCharacters: work('char_patch_table'),
         exSkin: work('skin_table'),
@@ -64,9 +64,12 @@ export async function makeArknightsKengxxiao(lang: Lang) {
         exZone: work('zone_table'),
         exEnemies: work('enemy_handbook_table'),
         exShop: work('shop_client_table'),
+        exSpecialOperators: work('special_operator_table'),
+        charMaster: work('char_master_table'),
       })
       raw.exSkin = slimSkins(raw.exSkin)
       raw.exShop = slimShop(raw.exShop)
+      raw.exSpecialOperators = slimSpecialOperators(raw.exSpecialOperators, charMaster)
 
       const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
       return [data, ArknightsKengxxiao]
@@ -147,6 +150,61 @@ function slimShop(exShop: any) {
     .map((i) => ({ skinId: i.skinId, startTime: i.startTime, endTime: i.endTime }))
 
   return { recommendList, carousels }
+}
+
+// A special operator's nodes and the missions that unlock them, without the in-game diagram's layout and tabs. Talents
+// unlock with the elite phases and have no mission of their own.
+export function slimSpecialOperators(table: any, charMaster: any) {
+  const nodeTypes = ['EVOLVE', 'SKILL', 'UNIEQUIP', 'MASTER']
+  const missionIds = new Set<string>()
+  const operatorDetailData: Record<string, unknown> = {}
+  for (const [charId, detail] of Object.entries<any>(table.operatorDetailData ?? {})) {
+    const nodeUnlockData: Record<string, unknown> = {}
+    for (const [nodeId, node] of Object.entries<any>(detail.nodeUnlockData ?? {})) {
+      if (!nodeTypes.includes(node.nodeType)) continue
+      if (node.unlockTaskId) missionIds.add(node.unlockTaskId)
+      nodeUnlockData[nodeId] = {
+        nodeId: node.nodeId,
+        nodeType: node.nodeType,
+        unlockEvolvePhase: node.unlockEvolvePhase,
+        unlockLevel: node.unlockLevel,
+        unlockTaskId: node.unlockTaskId,
+        frontNodeId: node.frontNodeId,
+      }
+    }
+    operatorDetailData[charId] = {
+      // -1 marks the levels past the phase's maximum.
+      specialOperatorExpMap: list(detail.specialOperatorExpMap).map((exps) => list(exps).filter((x) => x !== -1)),
+      nodeUnlockData,
+      evolveNodeData: detail.evolveNodeData ?? {},
+      skillNodeData: detail.skillNodeData ?? {},
+      uniEquipNodeData: detail.uniEquipNodeData ?? {},
+      masterNodeData: detail.masterNodeData ?? {},
+    }
+  }
+
+  const nodeUnlockMissionData: Record<string, unknown> = {}
+  for (const missionId of missionIds) {
+    const mission = table.nodeUnlockMissionData?.[missionId]
+    if (mission) nodeUnlockMissionData[missionId] = { id: mission.id, description: mission.description }
+  }
+
+  // char_master_table groups the candidates by masterId, but where ArknightsAssets' table has a single master, the
+  // table is that group alone.
+  const masterNames: Record<string, string> = {}
+  const groups = Array.isArray(charMaster?.candidates) ? [charMaster] : Object.values<any>(charMaster ?? {})
+  for (const candidate of groups.flatMap((g) => list(g?.candidates))) {
+    const name = candidate.talentData?.name
+    if (candidate.masterId && name && !(candidate.masterId in masterNames)) masterNames[candidate.masterId] = name
+  }
+
+  return {
+    modeData: table.modeData,
+    operatorBasicData: table.operatorBasicData ?? {},
+    operatorDetailData,
+    nodeUnlockMissionData,
+    masterNames,
+  }
 }
 
 // The same {}-for-[] quirk as array() below, for the raw tables walked before parsing.
@@ -455,5 +513,47 @@ export const ArknightsKengxxiao = z.object({
       }),
     ),
     carousels: array(z.object({ skinId: z.string(), startTime: z.number(), endTime: z.number() })),
+  }),
+  // The missions of the mode a special operator is trained in that unlock its elite phases, skill levels, skill
+  // masteries, modules and masters (MASTER: bonuses that apply only in that mode). Its levels take the mode's own
+  // experience instead, listed per level.
+  exSpecialOperators: z.object({
+    modeData: array(z.object({ type: z.string(), typeName: z.string() })),
+    operatorBasicData: z.record(
+      z.object({
+        soCharId: z.string(),
+        targetType: z.string(),
+        targetTopicName: z.string(),
+      }),
+    ),
+    operatorDetailData: z.record(
+      z.object({
+        specialOperatorExpMap: array(array(z.number())),
+        nodeUnlockData: z.record(
+          z.object({
+            nodeId: z.string(),
+            nodeType: z.enum(['EVOLVE', 'SKILL', 'UNIEQUIP', 'MASTER']),
+            unlockEvolvePhase: phase,
+            unlockLevel: z.number(),
+            unlockTaskId: z.union([z.string(), z.null()]),
+            frontNodeId: z.union([z.string(), z.null()]),
+          }),
+        ),
+        evolveNodeData: z.record(z.object({ nodeId: z.string(), toEvolvePhase: phase })),
+        // skillSpLevel 0 raises the skill level, 1 to 3 are masteries.
+        skillNodeData: z.record(
+          z.object({
+            nodeId: z.string(),
+            skillKey: z.string(),
+            skillLevel: z.number(),
+            skillSpLevel: z.number(),
+          }),
+        ),
+        uniEquipNodeData: z.record(z.object({ nodeId: z.string(), uniEquipId: z.string(), equipLevel: z.number() })),
+        masterNodeData: z.record(z.object({ nodeId: z.string(), masterId: z.string(), level: z.number() })),
+      }),
+    ),
+    nodeUnlockMissionData: z.record(z.object({ id: z.string(), description: z.string() })),
+    masterNames: z.record(z.string()),
   }),
 })
