@@ -45,7 +45,7 @@ export async function makeArknightsKengxxiao(lang: Lang) {
     file,
     async () => {
       const [version, commit] = await buildKengxxiaoVersion(lang)
-      version.schema = 6
+      version.schema = 7
       return [version, commit]
     },
     async (commit) => {
@@ -206,6 +206,10 @@ const character = {
   ]),
   position: z.enum(['MELEE', 'RANGED', 'ALL', 'NONE']),
   rarity: rarity,
+  // NONE, or the mode a special operator is trained in (ROGUE: Integrated Strategies). A special operator's levels,
+  // elite phases, skills, masteries and modules unlock through that mode's missions, so the material costs the table
+  // lists for some of them are never paid.
+  spTargetType: z.string(),
   skills: array(
     z.object({
       skillId: z.union([z.string(), z.null()]),
