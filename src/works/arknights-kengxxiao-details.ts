@@ -1,5 +1,5 @@
 import pProps from 'p-props'
-import { z } from 'zod'
+import { ZodTypeAny, z } from 'zod'
 import {
   Effect,
   localizeEffects,
@@ -12,8 +12,8 @@ import { buildData } from '../dc-utils.js'
 import { unwrapZod } from '../zutils.js'
 import { Lang, array, buildKengxxiaoVersion, fetchKengxxiaoExcel } from './arknights-kengxxiao.js'
 
-// Skill and module texts are kept out of arknights-kengxxiao: every page load downloads that one, and these are only
-// read when a player opens a detail. The version is the same one, so the client can tell when this file lags.
+// Skill, module and potential texts are kept out of arknights-kengxxiao: every page load downloads that one, and these
+// are only read when a player opens a detail. The version is the same one, so the client can tell when this file lags.
 export async function makeArknightsKengxxiaoDetails(lang: Lang) {
   const file = 'arknights-kengxxiao-details-' + lang
 
@@ -22,7 +22,7 @@ export async function makeArknightsKengxxiaoDetails(lang: Lang) {
     async () => {
       const [version, commit] = await buildKengxxiaoVersion(lang)
       // Bump it when the base skill rules change too: the containers are only rebuilt for a new version or schema.
-      version.schema = 2
+      version.schema = 3
       if (lang === 'zh_CN') return [version, commit, commit] as const
       // Base skill effects are read from zh_CN's texts, so a newer zh_CN rebuilds this region's details as well.
       const [zhVersion, zhCommit] = await buildKengxxiaoVersion('zh_CN')
@@ -38,6 +38,7 @@ export async function makeArknightsKengxxiaoDetails(lang: Lang) {
         exConst: work('gamedata_const'),
         exBuilding: work('building_data'),
         exCharacters: work('character_table'),
+        exPatchCharacters: work('char_patch_table'),
         exItems: work('item_table'),
         exUniEquips: work('uniequip_table'),
       })
@@ -53,8 +54,17 @@ export async function makeArknightsKengxxiaoDetails(lang: Lang) {
             })
 
       const raw = unwrapZod(Source.safeParse(local))
+      const potentials = readPotentials(local.exCharacters, local.exPatchCharacters)
+      const changing = Object.values(potentials).reduce((n, p) => n + p.talents.length, 0)
+      console.log(
+        `potentials: ${Object.keys(potentials).length} operators, ${changing} talents that change with potential`,
+      )
       const data = unwrapZod(
-        Details.safeParse({ ...transform(raw), buildingBuffs: buildingBuffs(lang, raw.exBuilding, local, zh) }),
+        Details.safeParse({
+          ...transform(raw),
+          buildingBuffs: buildingBuffs(lang, raw.exBuilding, local, zh),
+          potentials,
+        }),
       )
       return [data, Details]
     },
@@ -110,7 +120,57 @@ function buildingBuffs(lang: Lang, building: z.output<typeof SourceBuilding>, lo
   return out
 }
 
-function transform(raw: z.output<typeof Source>): Omit<z.input<typeof Details>, 'buildingBuffs'> {
+/** character_table and char_patch_table as fetched; returns Details['potentials'] */
+export function readPotentials(characterTable: unknown, patchTable: unknown): z.input<typeof Details>['potentials'] {
+  const tables = unwrapZod(
+    z
+      .object({
+        characterTable: z.record(z.unknown()),
+        patchTable: z.object({ patchChars: z.record(z.unknown()) }),
+      })
+      .safeParse({ characterTable, patchTable }),
+  )
+  // Tokens and traps share the table, and never have potentials of their own.
+  const operators = Object.entries(tables.characterTable).filter(([charId]) => charId.startsWith('char_'))
+  const source = unwrapZod(
+    z
+      .record(SourcePotentialCharacter)
+      .safeParse(Object.fromEntries([...operators, ...Object.entries(tables.patchTable.patchChars)])),
+  )
+
+  const out: z.input<typeof Details>['potentials'] = {}
+  for (const [charId, char] of Object.entries(source)) {
+    out[charId] = {
+      ranks: char.potentialRanks.map((rank) => rank.description ?? ''),
+      talents: char.talents.flatMap(({ candidates }) => {
+        if (candidates.some((c) => c.isHideTalent)) return []
+        // Each elite phase and level the talent improves at repeats every potential's text: keep the highest.
+        let top = candidates[0]?.unlockCondition
+        for (const c of candidates) if (compareUnlock(c.unlockCondition, top) > 0) top = c.unlockCondition
+        const kept: typeof candidates = []
+        for (const c of candidates) {
+          if (compareUnlock(c.unlockCondition, top) !== 0) continue
+          if (kept.some((k) => k.requiredPotentialRank === c.requiredPotentialRank)) continue
+          kept.push(c)
+        }
+        if (kept.length < 2) return []
+        kept.sort((a, b) => a.requiredPotentialRank - b.requiredPotentialRank)
+        return [
+          {
+            candidates: kept.map((c) => ({ potential: c.requiredPotentialRank, name: c.name, desc: c.description })),
+          },
+        ]
+      }),
+    }
+  }
+  return out
+}
+
+function compareUnlock(a: { phase: number; level: number }, b: { phase: number; level: number }) {
+  return a.phase - b.phase || a.level - b.level
+}
+
+function transform(raw: z.output<typeof Source>): Omit<z.input<typeof Details>, 'buildingBuffs' | 'potentials'> {
   const skills: z.input<typeof Details>['skills'] = {}
   for (const [skillId, skill] of Object.entries(raw.exSkills)) {
     if (!skill.levels.length) continue
@@ -191,6 +251,34 @@ const text = z.union([z.string(), z.null()])
 
 // Some fields are written as their enum number in one source and as the name in another; keep either as a string.
 const enumLike = z.union([z.string(), z.number().transform(String)])
+
+// A list the tables write as null when there is nothing in it, besides ArknightsAssets' {}.
+function list<T extends ZodTypeAny>(item: T) {
+  return z.union([array(item), z.null().transform((): z.output<T>[] => [])])
+}
+
+// ArknightsAssets writes a phase as its enum number.
+const SourcePhase = z.union([
+  z.enum(['PHASE_0', 'PHASE_1', 'PHASE_2']).transform((phase) => Number(phase.slice('PHASE_'.length))),
+  z.number(),
+])
+
+const SourcePotentialCharacter = z.object({
+  potentialRanks: list(z.object({ description: text })),
+  talents: list(
+    z.object({
+      candidates: list(
+        z.object({
+          unlockCondition: z.object({ phase: SourcePhase, level: z.number() }),
+          requiredPotentialRank: z.number(),
+          name: text,
+          description: text,
+          isHideTalent: z.boolean().optional(),
+        }),
+      ),
+    }),
+  ),
+})
 
 const SourceBuilding = z.object({
   buffs: z.record(z.object({ buffName: z.string(), description: z.string() })),
@@ -275,7 +363,14 @@ const Source = z.object({
 
 const Blackboard = z.array(z.tuple([z.string(), z.number()]))
 
-const Details = z.object({
+const PotentialTalentCandidate = z.object({
+  // requiredPotentialRank: the potentialRank from which this text applies (0 is 潜能 1)
+  potential: z.number(),
+  name: text,
+  desc: text,
+})
+
+export const Details = z.object({
   skills: z.record(
     z.object({
       skillType: z.string(),
@@ -337,6 +432,20 @@ const Details = z.object({
       text: z.string(),
       // Absent when the skill could not be summarised for this region
       effects: z.array(Effect).optional(),
+    }),
+  ),
+  // Keyed by charId, Amiya's other forms (char_patch_table's patchChars) by their own ids
+  potentials: z.record(
+    z.object({
+      // 潜能 2 to 潜能 6; empty for an operator without potential
+      ranks: z.array(z.string()),
+      // Talents that change with potential, at the highest elite and level they unlock at, without hidden talents
+      talents: z.array(
+        z.object({
+          // At least two, by potential ascending
+          candidates: z.array(PotentialTalentCandidate),
+        }),
+      ),
     }),
   ),
 })
