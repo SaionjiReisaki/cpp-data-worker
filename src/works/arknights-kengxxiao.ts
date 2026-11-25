@@ -45,13 +45,13 @@ export async function makeArknightsKengxxiao(lang: Lang) {
     file,
     async () => {
       const [version, commit] = await buildKengxxiaoVersion(lang)
-      version.schema = 8
+      version.schema = 9
       return [version, commit]
     },
     async (commit) => {
       const work = (table: string) => fetchKengxxiaoExcel(lang, commit, table)
 
-      const { charMaster, ...raw } = await pProps({
+      const { charMaster, gacha, ...raw } = await pProps({
         exCharacters: work('character_table'),
         exPatchCharacters: work('char_patch_table'),
         exSkin: work('skin_table'),
@@ -66,12 +66,13 @@ export async function makeArknightsKengxxiao(lang: Lang) {
         exShop: work('shop_client_table'),
         exSpecialOperators: work('special_operator_table'),
         charMaster: work('char_master_table'),
+        gacha: work('gacha_table'),
       })
       raw.exSkin = slimSkins(raw.exSkin)
       raw.exShop = slimShop(raw.exShop)
       raw.exSpecialOperators = slimSpecialOperators(raw.exSpecialOperators, charMaster)
 
-      const data = unwrapZod(ArknightsKengxxiao.safeParse(raw))
+      const data = unwrapZod(ArknightsKengxxiao.safeParse({ ...raw, exRecruit: slimRecruit(gacha, raw.exCharacters) }))
       return [data, ArknightsKengxxiao]
     },
   )
@@ -205,6 +206,75 @@ export function slimSpecialOperators(table: any, charMaster: any) {
     nodeUnlockMissionData,
     masterNames,
   }
+}
+
+// The game's own ids for the profession and position tags, which an operator's tagList leaves out.
+const professionTags: Record<string, number> = {
+  WARRIOR: 1,
+  SNIPER: 2,
+  TANK: 3,
+  MEDIC: 4,
+  SUPPORT: 5,
+  CASTER: 6,
+  SPECIAL: 7,
+  PIONEER: 8,
+}
+const positionTags: Record<string, number> = { MELEE: 9, RANGED: 10 }
+
+// gacha_table names the recruitment pool only in the text of the in-game rules: a line of names per rarity, after as
+// many ★, which zh_CN follows with a backslash and an n and the global servers with a newline. The names are matched
+// back to character_table by name and rarity; ArknightsAssets quotes one name there ('Justice Knight'), and traps and
+// tokens share some names with operators.
+export function slimRecruit(gacha: any, characters: any) {
+  const bare = (name: string) => name.trim().replace(/^['"]+|['"]+$/g, '')
+  const stars = (rarity: unknown) =>
+    typeof rarity === 'number' ? rarity + 1 : Number(/^TIER_(\d)$/.exec(String(rarity))?.[1])
+  const byName = new Map<string, string[]>()
+  for (const [charId, c] of Object.entries<any>(characters)) {
+    if (!charId.startsWith('char_')) continue
+    const key = `${stars(c.rarity)} ${bare(c.name)}`
+    byName.set(key, [...(byName.get(key) ?? []), charId])
+  }
+
+  const tagIds = new Map<string, number>(list(gacha.gachaTags).map((t) => [t.tagName, t.tagId]))
+  // specialTagRarityTable counts rarity from 0
+  const rarityTags = new Map<number, number[]>()
+  for (const [tagId, rarities] of Object.entries<any>(gacha.specialTagRarityTable ?? {})) {
+    for (const r of list(rarities)) rarityTags.set(r + 1, [...(rarityTags.get(r + 1) ?? []), Number(tagId)])
+  }
+
+  const pool: { charId: string; tags: number[] }[] = []
+  const detail = String(gacha.recruitDetail ?? '').replace(/<@[^>]*>|<\/>/g, '')
+  for (const [, line, names] of detail.matchAll(/(★+)(?:\\n|\r?\n)([^\r\n]*)/g)) {
+    const rarity = line.length
+    for (const name of names.split('/').map((x) => x.trim())) {
+      if (!name) continue
+      const found = byName.get(`${rarity} ${bare(name)}`) ?? []
+      if (found.length !== 1) {
+        console.warn(`slimRecruit: ${found.length} operators of ${rarity}★ named ${name}: ${found.join(', ')}`)
+        continue
+      }
+      const charId = found[0]
+      const c = characters[charId]
+      const tags = new Set<number>(rarityTags.get(rarity) ?? [])
+      if (c.profession in professionTags) tags.add(professionTags[c.profession])
+      if (c.position in positionTags) tags.add(positionTags[c.position])
+      for (const tagName of list(c.tagList)) {
+        const tagId = tagIds.get(tagName)
+        if (tagId === undefined) console.warn(`slimRecruit: ${charId} carries ${tagName}, which is no recruitment tag`)
+        else tags.add(tagId)
+      }
+      pool.push({ charId, tags: [...tags].sort((a, b) => a - b) })
+    }
+  }
+
+  const carried = new Set(pool.flatMap((x) => x.tags))
+  const tags = list(gacha.gachaTags)
+    .filter((t) => carried.has(t.tagId))
+    .map((t) => ({ tagId: t.tagId, tagName: t.tagName }))
+    .sort((a, b) => a.tagId - b.tagId)
+
+  return { tags, pool }
 }
 
 // The same {}-for-[] quirk as array() below, for the raw tables walked before parsing.
@@ -555,5 +625,11 @@ export const ArknightsKengxxiao = z.object({
     ),
     nodeUnlockMissionData: z.record(z.object({ id: z.string(), description: z.string() })),
     masterNames: z.record(z.string()),
+  }),
+  // Public recruitment: the tags the pool's operators carry, and the pool in the order the in-game rules list it.
+  // Ordered as a list because the container is written with its object keys sorted.
+  exRecruit: z.object({
+    tags: array(z.object({ tagId: z.number(), tagName: z.string() })),
+    pool: array(z.object({ charId: z.string(), tags: array(z.number()) })),
   }),
 })
